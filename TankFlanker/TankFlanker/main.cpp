@@ -1,7 +1,6 @@
-#include "DxLib.h"
-#include "EffekseerForDXLib.h"
-#include "Box2D/Box2D.h"
-#include <windows.h>
+
+
+#include"sub.hpp"
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
