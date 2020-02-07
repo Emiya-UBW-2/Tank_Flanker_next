@@ -156,10 +156,19 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="make_thread.cpp" />
     <ClCompile Include="sub.cpp" />
     <ClCompile Include="useful.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DXLib_mat.hpp" />
+    <ClInclude Include="DXLib_vec.hpp" />
+    <ClInclude Include="EffekseerEffectHandle.hpp" />
+    <ClInclude Include="FontHandle.hpp" />
+    <ClInclude Include="GraphHandle.hpp" />
+    <ClInclude Include="make_thread.hpp" />
+    <ClInclude Include="MV1ModelHandle.hpp" />
+    <ClInclude Include="SoundHandle.hpp" />
     <ClInclude Include="sub.hpp" />
     <ClInclude Include="useful.hpp" />
   </ItemGroup>
