@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <DxLib.h>
 #include <string_view>
+#include <algorithm>
 class SoundHandle {
 private:
 	int handle_;

@@ -31,22 +31,22 @@ public:
 		}
 	}
 	int get() const noexcept { return handle_; }
-	int DrawString(int x, int y, std::basic_string_view<TCHAR> String, unsigned int Color, unsigned int EdgeColor = 0, bool VerticalFlag = false) const noexcept {
-		return DxLib::DrawNStringToHandle(x, y, String.data(), String.size(), Color, this->handle_, EdgeColor, VerticalFlag);
+	bool DrawString(int x, int y, std::basic_string_view<TCHAR> String, unsigned int Color, unsigned int EdgeColor = 0, bool VerticalFlag = false) const noexcept {
+		return DxLib::DrawNStringToHandle(x, y, String.data(), String.size(), Color, this->handle_, EdgeColor, VerticalFlag)==TRUE;
 	}
 
 	template <typename... Args>
-	int DrawStringFormat(int x, int y, unsigned int Color, std::string String, Args&&... args) const noexcept {
-		return DxLib::DrawFormatStringToHandle(x, y, Color, this->handle_, String.c_str(), args...);
+	bool DrawStringFormat(int x, int y, unsigned int Color, std::string String, Args&&... args) const noexcept {
+		return DxLib::DrawFormatStringToHandle(x, y, Color, this->handle_, String.c_str(), args...)==TRUE;
 	}
 
 	int GetDrawWidth(std::basic_string_view<TCHAR> String, bool VerticalFlag = false) const noexcept {
 		return DxLib::GetDrawNStringWidthToHandle(String.data(), String.size(), this->handle_, VerticalFlag);
 	}
-	static FontHandle Create(std::basic_string_view<TCHAR> FontName, int Size, int Thick, int FontType = -1, int CharSet = -1, int EdgeSize = -1, bool Italic = false) noexcept {
-		return { DxLib::CreateFontToHandleWithStrLen(FontName.data(), FontName.length(), Size, Thick, FontType, CharSet, EdgeSize, Italic) };
+	static FontHandle Create(std::basic_string_view<TCHAR> FontName, int Size, int FontType = -1, int CharSet = -1, int EdgeSize = -1, bool Italic = false) noexcept {
+		return { DxLib::CreateFontToHandleWithStrLen(FontName.data(), FontName.length(), Size, Size/3, FontType, CharSet, EdgeSize, Italic) };
 	}
-	static FontHandle Create(int Size, int Thick, int FontType = -1, int CharSet = -1, int EdgeSize = -1, bool Italic = false) noexcept {
-		return { DxLib::CreateFontToHandle(nullptr, Size, Thick, FontType, CharSet, EdgeSize, Italic) };
+	static FontHandle Create(int Size, int FontType = -1, int CharSet = -1, int EdgeSize = -1, bool Italic = false) noexcept {
+		return { DxLib::CreateFontToHandle(nullptr, Size, Size / 3, FontType, CharSet, EdgeSize, Italic) };
 	}
 };

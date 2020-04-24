@@ -20,12 +20,10 @@ public:
 		return *this;
 	}
 	~GraphHandle() noexcept {
-		if (-1 != this->handle_) {
-			DeleteGraph(this->handle_);
-		}
+		if (this->handle_ != -1) { DeleteGraph(this->handle_); }
 	}
 	void Dispose() noexcept {
-		if (-1 != this->handle_) {
+		if (this->handle_ != -1) {
 			DeleteGraph(this->handle_);
 			this->handle_ = -1;
 		}
@@ -34,7 +32,22 @@ public:
 	static GraphHandle Load(std::basic_string_view<TCHAR> FileName, bool NotUse3DFlag = false) noexcept {
 		return { DxLib::LoadGraphWithStrLen(FileName.data(), FileName.length(), NotUse3DFlag) };
 	}
-	static GraphHandle Make(int SizeX, int SizeY, bool UseAlphaChannel = false) noexcept {
-		return { DxLib::MakeScreen(SizeX, SizeY, UseAlphaChannel) };
+	static GraphHandle LoadDiv(std::basic_string_view<TCHAR> FileName, int AllNum, int XNum, int YNum, int   XSize, int   YSize, int *HandleArray, bool NotUse3DFlag = false) noexcept {
+		return { DxLib::LoadDivGraphWithStrLen(FileName.data(), FileName.length(), AllNum, XNum, YNum,   XSize, YSize, HandleArray, NotUse3DFlag) };
+	}
+		
+	static GraphHandle Make(int SizeX, int SizeY, bool trns = false) noexcept {
+		return { DxLib::MakeScreen(SizeX, SizeY, (trns ? TRUE : FALSE)) };
+	}
+
+	void DrawGraph(int posx,int posy,bool trns) noexcept {
+		if (this->handle_ != -1) {
+			DxLib::DrawGraph(posx, posy, this->handle_, (trns ? TRUE : FALSE));
+		}
+	}
+	void DrawExtendGraph(int posx1, int posy1, int posx2, int posy2, bool trns) noexcept {
+		if (this->handle_ != -1) {
+			DxLib::DrawExtendGraph(posx1, posy1, posx2, posy2, this->handle_, (trns ? TRUE : FALSE));
+		}
 	}
 };

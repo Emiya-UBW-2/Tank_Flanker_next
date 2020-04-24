@@ -1,32 +1,55 @@
 #pragma once
-#ifndef INCLUDED_thd_h_
-#define INCLUDED_thd_h_
 
+#include "DxLib.h"
 #include "sub.hpp"
 #include "useful.hpp"
-#include <thread> 
-#include <chrono>
-#include <array> 
-//入力
-struct input {
-	std::array<bool, 19> get; /*キー用(一時監視)*/
-	std::array<bool, 4> get2; /*キー用(常時監視)*/
-};
-struct output {
-	bool ends{ false }; /*終了フラグ*/
 
-	int y = 0;
+#include "DXLib_vec.hpp"
+#include "SoundHandle.hpp"
+#include "GraphHandle.hpp"
+#include "FontHandle.hpp"
+#include "MV1ModelHandle.hpp"
+
+#include <windows.h>
+#include <fstream>
+#include <string_view>
+#include <optional>
+#include <array>
+#include <vector>
+#include <utility>
+#include <D3D11.h>
+
+#include <thread> 
+
+//入力
+struct systems {
 };
-//60fpsを維持しつつ操作を演算(box2D込み)
+
+struct input {
+};
+//出力
+struct output {
+};
+//60fpsを維持しつつ操作を演算
 class ThreadClass {
 private:
 	std::thread thread_1;
-	void calc(input& p_in, output& p_out);
+	void calc(input& p_in, output& p_out) {
+		return;
+	}
 public:
-	ThreadClass();
-	~ThreadClass();
-	void thread_start(input& p_in, output& p_out);
-	void thead_stop();
-};
+	ThreadClass() {
+	}
+	~ThreadClass() {
+		thead_stop();
+	}
+	void thread_start(input& p_in, output& p_out) {
+		thread_1 = std::thread([&] { calc(p_in, p_out); });
+	}
+	void thead_stop() {
+		if (thread_1.joinable()) {
+			thread_1.detach();
 
-#endif 
+		}
+	}
+};
