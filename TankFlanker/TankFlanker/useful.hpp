@@ -28,22 +28,6 @@ static float rad2deg(T p1) { return float(p1)*180.f / DX_PI_F;}//ラジアンか
 //
 typedef std::pair<size_t, float> pair;
 //
-static size_t count_impl(std::basic_string_view<TCHAR> pattern) {
-	WIN32_FIND_DATA win32fdt;
-	size_t cnt = 0;
-	const auto hFind = FindFirstFile(pattern.data(), &win32fdt);
-	if (hFind != INVALID_HANDLE_VALUE) {
-		do {
-			if (win32fdt.cFileName[0] != '.')
-				++cnt;
-		} while (FindNextFile(hFind, &win32fdt));
-	}
-	FindClose(hFind);
-	return cnt;
-}
-static size_t count_team(std::string stage) { return count_impl("stage/" + stage + "/team/*.txt"); }
-static size_t count_enemy(std::string stage) { return count_impl("stage/" + stage + "/enemy/*.txt"); }
-//
 static std::string getright(const char* p1) {
 	std::string tempname = p1;
 	return tempname.substr(tempname.find('=') + 1);
@@ -51,6 +35,8 @@ static std::string getright(const char* p1) {
 //
 static MATRIX_ref Axis1(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
 static MATRIX_ref Axis1(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec, VECTOR_ref pos) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
+static MATRIX_ref Axis2(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
+static MATRIX_ref Axis2(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec, VECTOR_ref pos) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
 static MATRIX_ref RotX(const float& rad) noexcept { return { DxLib::MGetRotX(rad) }; }
 static MATRIX_ref RotY(const float& rad) noexcept { return { DxLib::MGetRotY(rad) }; }
 static MATRIX_ref RotZ(const float& rad) noexcept { return { DxLib::MGetRotZ(rad) }; }

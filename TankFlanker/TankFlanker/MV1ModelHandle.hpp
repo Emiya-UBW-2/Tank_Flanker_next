@@ -44,19 +44,29 @@ public:
 	bool SetMatrix(const MATRIX_ref& mat) const noexcept { return MV1SetMatrix(this->handle_, mat.get()) == TRUE; }
 	bool DrawModel()  const noexcept { return MV1DrawModel(this->handle_) == TRUE; }
 	bool SetOpacityRate(const float& p1)  const noexcept { return MV1SetOpacityRate(this->handle_, p1) == TRUE; }
-
+	bool SetScale(const VECTOR_ref& p1)  const noexcept { return MV1SetScale(this->handle_, p1.get()) == TRUE; }
 	/*テクスチャ*/
 	bool SetTextureGraphHandle(const int& p1, const GraphHandle& p2, bool trans)  const noexcept { return MV1SetTextureGraphHandle(this->handle_, p1, p2.get(), trans ? TRUE : FALSE) == TRUE; }
 	/*フレーム*/
 	VECTOR_ref frame(const int& p1) const noexcept { return MV1GetFramePosition(this->handle_, p1); }
 	size_t frame_num(void) const noexcept { return MV1GetFrameNum(this->handle_); }
 	size_t frame_parent(const int& p1) const noexcept { return MV1GetFrameParent(this->handle_, p1); }
+	size_t frame_child_num(const int& p1) const noexcept { return MV1GetFrameChildNum(this->handle_, p1); }
 	bool SetFrameLocalMatrix(const int& id,MATRIX_ref mat) const noexcept { return MV1SetFrameUserLocalMatrix(this->handle_,id, mat.get()) == TRUE; }
 	bool DrawFrame(const int& p1)  const noexcept { return MV1DrawFrame(this->handle_,p1) == TRUE; }
+	std::string frame_name(const int& p1) noexcept { return MV1GetFrameName(this->handle_, p1); }
+
+	void frame_reset(const int& p1) const noexcept { MV1ResetFrameUserLocalMatrix(this->handle_, p1); }
 	/*マテリアル*/
 	size_t material_num(void) const noexcept { return MV1GetMaterialNum(this->handle_); }
+	void material_AlphaTestAll(bool Enable,int mode,int param) const noexcept {
+		MV1SetMaterialDrawAlphaTestAll(this->handle_, Enable ? TRUE : FALSE, mode, param);
+	}
+	std::string material_name(const int& p1) noexcept { return MV1GetMaterialName(this->handle_, p1); }
 	/*メッシュ*/
 	size_t mesh_num(void) const noexcept { return MV1GetMeshNum(this->handle_); }
+	VECTOR_ref mesh_maxpos(const int& p1) const noexcept { return MV1GetMeshMaxPosition(this->handle_, p1); }
+	VECTOR_ref mesh_minpos(const int& p1) const noexcept { return MV1GetMeshMinPosition(this->handle_, p1); }
 	/*シェイプ*/
 	int SearchShape(const char* str) const noexcept { return MV1SearchShape(this->handle_, str); }
 	bool SetShapeRate(const int& p1,const float& p2)  const noexcept { return MV1SetShapeRate(this->handle_, p1,p2) == TRUE; }
@@ -144,6 +154,9 @@ public:
 	/*当たり判定*/
 	bool SetupCollInfo(const int&x = 32, const int&y = 8, const int&z = 32, const int& frame = -1, const int& mesh = -1)  const noexcept {
 		return MV1SetupCollInfo(this->handle_, frame, x, y, z, mesh) == TRUE;
+	}
+	bool RefreshCollInfo(const int& frame = -1, const int& mesh = -1)  const noexcept {
+		return MV1RefreshCollInfo(this->handle_, frame, mesh) == TRUE;
 	}
 	const auto CollCheck_Line(const VECTOR_ref& start, const VECTOR_ref& end, const int& frame = -1, const int& mesh = -1) const noexcept {
 		return MV1CollCheck_Line(this->handle_, frame, start.get(), end.get(), mesh);

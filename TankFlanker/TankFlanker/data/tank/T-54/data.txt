@@ -1,0 +1,12 @@
+isfloat=false
+speed_flont=50
+speed_back=-10
+body_rad=40
+turret_rad=60
+gun_0_name=D-10TG
+gun_0_loadcnt=5.0
+gun_0_useammo0=BR-412D APCBC
+gun_1_name=DShk38
+gun_1_loadcnt=0.16
+gun_1_useammo0=USSR 12.7
+end

@@ -32,9 +32,11 @@ enum Effect {
 };
 struct EffectS {
 	bool flug{ false };		 /**/
+	size_t id;
 	Effekseer3DPlayingHandle handle; /**/
 	VECTOR_ref pos;			 /**/
 	VECTOR_ref nor;			 /**/
+	float scale;		 /**/
 };
 
 class DXDraw {
@@ -48,7 +50,8 @@ private:
 		unsigned int col = 0;
 	};
 	std::vector<color> colors;
-	bool use_vsync=false;
+	//bool use_vsync = false;
+	bool use_vsync = true;
 
 	std::array<EffekseerEffectHandle, effects> effHndle; /*エフェクトリソース*/
 	EffekseerEffectHandle gndsmkHndle;		     /*エフェクトリソース*/
@@ -62,14 +65,14 @@ public:
 	DXDraw(const char* title) {
 		SetOutApplicationLogValidFlag(FALSE);					/*log*/
 		SetMainWindowText(title);						/*タイトル*/
-		SetUsePixelLighting(TRUE);						/*ピクセルシェーダの使用*/
+		//SetUsePixelLighting(TRUE);						/*ピクセルシェーダの使用*/
 		ChangeWindowMode(TRUE);							/*窓表示*/
 		SetUseDirect3DVersion(DX_DIRECT3D_11);					/*directX ver*/
 		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);				/*垂直同期*/
-		SetUseDirectInputFlag(TRUE);						/**/
+		//SetUseDirectInputFlag(TRUE);						/**/
 		SetWindowSizeChangeEnableFlag(FALSE, FALSE);				// ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする
-		SetGraphMode(dispx, dispy, 32);					/*解像度*/
-		SetFullSceneAntiAliasingMode(4, 2);
+		SetGraphMode(dispx, dispy, 32);						/*解像度*/
+		//SetFullSceneAntiAliasingMode(4, 2);
 		DxLib_Init();								/**/
 
 		Effekseer_Init(8000);				    /*Effekseer*/
@@ -100,7 +103,7 @@ public:
 		shadow_nearsize = nearsize;
 		shadow_near = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
 		shadow_far = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
-		SetGlobalAmbientLight(GetColorF(0.75f, 0.75f, 0.75f, 0.0f));
+		SetGlobalAmbientLight(GetColorF(0.80f, 0.75f, 0.70f, 0.0f));
 		SetLightDirection(Light_dir.get());
 		SetShadowMapLightDirection(shadow_near, Light_dir.get());
 		SetShadowMapLightDirection(shadow_far, Light_dir.get());
