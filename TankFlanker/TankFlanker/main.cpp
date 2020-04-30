@@ -1,12 +1,11 @@
 #define NOMINMAX
 #include "sub.hpp"
 
-constexpr auto EXTEND = 4;				  /*ブルーム用*/
-
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	auto Drawparts = std::make_unique<DXDraw>("TankFlanker"); /*汎用クラス*/
 	auto UIparts = std::make_unique<UI>();/*UI*/
 	auto Debugparts = std::make_unique<DeBuG>(60); /*汎用クラス*/
+	auto Hostpassparts = std::make_unique<HostPassEffect>();/*UI*/
 	//waord
 	auto world = std::make_unique<b2World>(b2Vec2(0.0f, 0.0f)); /* 剛体を保持およびシミュレートするワールドオブジェクトを構築*/
 	//カメラ
@@ -22,8 +21,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	GraphHandle MainScreen = GraphHandle::Make(dispx, dispy, true);
 	GraphHandle NearScreen = GraphHandle::Make(dispx, dispy, true);
 	GraphHandle BufScreen = GraphHandle::Make(dispx, dispy);
-	GraphHandle HighBrightScreen = GraphHandle::Make(dispx, dispy);		     /*エフェクト*/
-	GraphHandle GaussScreen = GraphHandle::Make(dispx / EXTEND, dispy / EXTEND); /*エフェクト*/
 	//地面
 	MV1 map, map_col;
 	//空母
@@ -33,7 +30,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	float car_yrad = 0.f;
 	VECTOR_ref car_pos_add;
 	float car_yrad_add = 0.f;
-
 	//空
 	MV1 sky;
 	//海
@@ -66,320 +62,38 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	bool locktrt = false;
 	int Rot = 0;
 	float ratio = 1.f;
-	float range_p = 1.f;
-	float range = 1.f;
+	float range=0.f;
+	float range_p = 0.f;
+	//データ//=========================================
 	//弾薬
-	std::vector<hit::ammo> Ammos;
-	//砲弾
-	{
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "M728 APDS";
-		Ammos.back().type = 0;//ap=0,he=1
-		Ammos.back().caliber = 0.105f;
-		Ammos.back().penetration = 268.f;
-		Ammos.back().speed = 1426.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "M393 HESH";
-		Ammos.back().type = 1;//ap=0,he=1
-		Ammos.back().caliber = 0.105f;
-		Ammos.back().penetration = 145.f;
-		Ammos.back().speed = 730.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "NATO 7.62";
-		Ammos.back().type = 1;//ap=0,he=1
-		Ammos.back().caliber = 0.00762f;
-		Ammos.back().penetration = 12.f;
-		Ammos.back().speed = 600.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "BR-412D APCBC";
-		Ammos.back().type = 0;//ap=0,he=1
-		Ammos.back().caliber = 0.100f;
-		Ammos.back().penetration = 175.f;
-		Ammos.back().speed = 887.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "USSR 12.7";
-		Ammos.back().type = 1;//ap=0,he=1
-		Ammos.back().caliber = 0.0127f;
-		Ammos.back().penetration = 24.f;
-		Ammos.back().speed = 850.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "vulcan 20";
-		Ammos.back().type = 1;//ap=0,he=1
-		Ammos.back().caliber = 0.020f;
-		Ammos.back().penetration = 30.f;
-		Ammos.back().speed = 800.f;
-
-		Ammos.resize(Ammos.size() + 1);
-		Ammos.back().name = "M344A1 HEAT";
-		Ammos.back().type = 1;//ap=0,he=1
-		Ammos.back().caliber = 0.106f;
-		Ammos.back().penetration = 400.f;
-		Ammos.back().speed = 503.f;
-	}
+	std::vector<hit::Ammos> Ammos;
+	hit::set_ammos(&Ammos);
 	//車輛
 	std::vector<hit::Tanks> tank;
 	find_folders("data/tank/*", &tank);
-	for (auto& t : tank) {
-		MV1::Load("data/tank/" + t.name + "/model.mv1", &t.obj);
-		MV1::Load("data/tank/" + t.name + "/col.mv1", &t.col);
-		//
-		t.down_in_water = 0.f;
-		for (int i = 0; i < t.obj.mesh_num(); i++) {
-			auto p = t.obj.mesh_maxpos(i).y();
-			if (t.down_in_water < p) {
-				t.down_in_water = p;
-			}
-		}
-		t.obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
-		for (int i = 0; i < t.obj.frame_num(); i++) {
-			std::string p = t.obj.frame_name(i);
-			if (p.find("転輪", 0) != std::string::npos) {
-				t.wheelframe.resize(t.wheelframe.size() + 1);
-				t.wheelframe.back().frame.first = i;
-				t.wheelframe.back().frame.second = t.obj.frame(t.wheelframe.back().frame.first);
-			}
-			else if (p.find("旋回", 0) != std::string::npos) {
-				t.gunframe.resize(t.gunframe.size() + 1);
-				t.gunframe.back().frame1.first = i;
-				t.gunframe.back().frame1.second = t.obj.frame(t.gunframe.back().frame1.first);
-				auto p2 = t.obj.frame_parent(t.gunframe.back().frame1.first);
-				if (p2 >= 0) {
-					t.gunframe.back().frame1.second -= t.obj.frame(int(p2));//親がいる時引いとく
-				}
-				if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
-					if (t.obj.frame_name(t.gunframe.back().frame1.first + 1).find("仰角", 0) != std::string::npos) {
-						t.gunframe.back().frame2.first = t.gunframe.back().frame1.first + 1;
-						t.gunframe.back().frame2.second = t.obj.frame(t.gunframe.back().frame2.first) - t.obj.frame(t.gunframe.back().frame1.first);
-						if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
-							t.gunframe.back().frame3.first = t.gunframe.back().frame2.first + 1;
-							t.gunframe.back().frame3.second = t.obj.frame(t.gunframe.back().frame3.first) - t.obj.frame(t.gunframe.back().frame2.first);
-						}
-						else {
-							t.gunframe.back().frame3.first = -1;
-						}
-					}
-				}
-				else {
-					t.gunframe.back().frame2.first = -1;
-				}
-			}
-			else if (p.find("min", 0) != std::string::npos) {
-				t.minpos = t.obj.frame(i);
-			}
-			else if (p.find("max", 0) != std::string::npos) {
-				t.maxpos = t.obj.frame(i);
-			}
-		}
-		//2	左後部0
-		{
-			float tmp = 0.f;
-			for (auto& f : t.wheelframe) {
-				if (f.frame.second.x() >= 0) {
-					t.square[0] = f.frame.first;
-					tmp = f.frame.second.z();
-					break;
-				}
-			}
-			for (auto& f : t.wheelframe) {
-				if (t.square[0] != f.frame.first) {
-					if (f.frame.second.x() >= 0) {
-						if (tmp < f.frame.second.z()) {
-							t.square[0] = f.frame.first;
-							tmp = f.frame.second.z();
-						}
-					}
-				}
-			}
-		}
-		//10	左前部1
-		{
-			float tmp = 0.f;
-			for (auto& f : t.wheelframe) {
-				if (f.frame.second.x() >= 0) {
-					t.square[1] = f.frame.first;
-					tmp = f.frame.second.z();
-					break;
-				}
-			}
-			for (auto& f : t.wheelframe) {
-				if (t.square[1] != f.frame.first) {
-					if (f.frame.second.x() >= 0) {
-						if (tmp > f.frame.second.z()) {
-							t.square[1] = f.frame.first;
-							tmp = f.frame.second.z();
-						}
-					}
-				}
-			}
-		}
-		//3	右後部2
-		{
-			float tmp = 0.f;
-			for (auto& f : t.wheelframe) {
-				if (!(f.frame.second.x() >= 0)) {
-					t.square[2] = f.frame.first;
-					tmp = f.frame.second.z();
-					break;
-				}
-			}
-			for (auto& f : t.wheelframe) {
-				if (t.square[2] != f.frame.first) {
-					if (!(f.frame.second.x() >= 0)) {
-						if (tmp < f.frame.second.z()) {
-							t.square[2] = f.frame.first;
-							tmp = f.frame.second.z();
-						}
-					}
-				}
-			}
-		}
-		//11	右前部3
-		{
-			float tmp = 0.f;
-			for (auto& f : t.wheelframe) {
-				if (!(f.frame.second.x() >= 0)) {
-					t.square[3] = f.frame.first;
-					tmp = f.frame.second.z();
-					break;
-				}
-			}
-			for (auto& f : t.wheelframe) {
-				if (t.square[3] != f.frame.first) {
-					if (!(f.frame.second.x() >= 0)) {
-						if (tmp > f.frame.second.z()) {
-							t.square[3] = f.frame.first;
-							tmp = f.frame.second.z();
-						}
-					}
-				}
-			}
-		}
-		//
-		for (int i = 0; i < t.col.mesh_num(); i++) {
-			std::string p = t.col.material_name(i);
-			if (p.find("armer", 0) != std::string::npos) {//装甲
-				t.armer_mesh.resize(t.armer_mesh.size() + 1);
-				t.armer_mesh.back().first = i;
-				t.armer_mesh.back().second = std::stof(getright(p.c_str()));//装甲値
-			}
-			else if (p.find("space", 0) != std::string::npos) {//空間装甲
-				t.space_mesh.resize(t.space_mesh.size() + 1);
-				t.space_mesh.back() = i;
-			}
-			else {//モジュール
-				t.module_mesh.resize(t.module_mesh.size() + 1);
-				t.module_mesh.back() = i;
-			}
-		}
-
-		{
-			int mdata = FileRead_open(("data/tank/" + t.name + "/data.txt").c_str(), FALSE);
-			char mstr[64]; /*tank*/
-			FileRead_gets(mstr, 64, mdata);
-			t.isfloat = (getright(mstr).find("true") != std::string::npos);
-			t.flont_speed_limit = getparam_f(mdata);
-			t.back_speed_limit = getparam_f(mdata);
-			t.body_rad_limit = getparam_f(mdata);
-			t.turret_rad_limit = getparam_f(mdata);
-
-			FileRead_gets(mstr, 64, mdata);
-			for(auto& g : t.gunframe){
-				g.name = getright(mstr);
-				g.load_time = getparam_f(mdata);
-				while (true) {
-					FileRead_gets(mstr, 64, mdata);
-					if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
-						break;
-					}
-					g.useammo.resize(g.useammo.size() + 1);
-					g.useammo.back() = getright(mstr);
-				}
-			}
-			FileRead_close(mdata);
-		}
-	}
+	hit::set_tanks(&tank);
 	//飛行機
 	std::vector<hit::Planes> plane;
 	find_folders("data/plane/*", &plane);
-	for (auto& t : plane) {
-		//モデル
-		MV1::Load("data/plane/" + t.name + "/model.mv1", &t.obj);
-		MV1::Load("data/plane/" + t.name + "/col.mv1", &t.col);
-		//αテスト
-		t.obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
-		//最大最小を取得
-		for (int i = 0; i < t.obj.mesh_num(); i++) {
-			if (t.maxpos.x() < t.obj.mesh_maxpos(i).x()) { t.maxpos.x(t.obj.mesh_maxpos(i).x()); }
-			if (t.maxpos.z() < t.obj.mesh_maxpos(i).z()) { t.maxpos.z(t.obj.mesh_maxpos(i).z()); }
-			if (t.minpos.x() > t.obj.mesh_minpos(i).x()) { t.minpos.x(t.obj.mesh_minpos(i).x()); }
-			if (t.minpos.z() > t.obj.mesh_minpos(i).z()) { t.minpos.z(t.obj.mesh_minpos(i).z()); }
-		}
-		//フレーム
-		for (int i = 0; i < t.obj.frame_num(); i++) {
-			std::string p = t.obj.frame_name(i);
-			if (p.find("脚", 0) != std::string::npos) {
-				if (p.find("ハッチ", 0) == std::string::npos) {
-					t.wheelframe.resize(t.wheelframe.size() + 1);
-					t.wheelframe.back().frame.first = i;
-					t.wheelframe.back().frame.second = t.obj.frame(t.wheelframe.back().frame.first);
-				}
-			}
-			else if (p.find("バーナー", 0) != std::string::npos) {
-				t.burner.resize(t.burner.size() + 1);
-				t.burner.back().first = i;
-				t.burner.back().second = t.obj.frame(t.burner.back().first);
-			}
-			else if (p.find("フック", 0) != std::string::npos) {
-				t.hook.first = i;
-				t.hook.second = t.obj.frame(t.hook.first);
-			}
-		}
-		//データ取得
-		{
-			int mdata = FileRead_open(("data/plane/" + t.name + "/data.txt").c_str(), FALSE);
-			char mstr[64]; /*tank*/
-			t.max_speed_limit = getparam_f(mdata) / 3.6f;
-			t.mid_speed_limit = getparam_f(mdata) / 3.6f;
-			t.min_speed_limit = getparam_f(mdata) / 3.6f;
-			t.rad_limit = getparam_f(mdata);
-
-			FileRead_gets(mstr, 64, mdata);
-
-			if (std::string(mstr).find(("gun_" + std::to_string(t.gunframe.size()))) != std::string::npos) {
-				t.gunframe.resize(t.gunframe.size() + 1);
-			}
-			for (auto& g : t.gunframe) {
-				g.name = getright(mstr);
-				g.load_time = getparam_f(mdata);
-				while (true) {
-					FileRead_gets(mstr, 64, mdata);
-					if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
-						break;
-					}
-					g.useammo.resize(g.useammo.size() + 1);
-					g.useammo.back() = getright(mstr);
-				}
-			}
-
-			FileRead_close(mdata);
-		}
-	}
+	hit::set_planes(&plane);
+	//===============================================
 	//キャラ
 	std::vector<hit::Chara> chara;
 	//空母
 	MV1::Load("data/carrier/model.mv1", &carrier);
 	std::vector < hit::frames > wire;
+	std::vector<hit::frames> catapult;
 	for (int i = 0; i < carrier.frame_num(); i++) {
 		std::string p = carrier.frame_name(i);
 		if (p.find("ﾜｲﾔｰ", 0) != std::string::npos) {
 			wire.resize(wire.size() + 1);
 			wire.back().first = i;
 			wire.back().second = carrier.frame(wire.back().first);
+		}
+		else if (p.find("ｶﾀﾊﾟﾙﾄ", 0) != std::string::npos) {
+			catapult.resize(catapult.size() + 1);
+			catapult.back().first = i;
+			catapult.back().second = carrier.frame(catapult.back().first + 2) - carrier.frame(catapult.back().first);
 		}
 	}
 	carrier.SetMatrix(RotY(car_yrad)*car_pos.Mtrans());
@@ -410,17 +124,18 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		}
 	}
 	MV1::Load("data/sky/model.mv1", &sky);	//空
-	//
+	//ココから繰り返し読み込み//-------------------------------------------------------------------
 	{
 		chara.resize(chara.size() + 1);
 		//戦車
-		chara.back().vehicle[0].use_id = 0;
+		chara.back().vehicle[0].use_id = 1;
 		chara.back().vehicle[0].pos = VGet(0.f, 1.81f, -2.48f);
 		chara.back().vehicle[0].yrad = deg2rad(270.f);
 		//飛行機
-		chara.back().vehicle[1].use_id = 1;
-	//	chara.back().vehicle[1].pos = VGet(0.f, 24.f, -1490.f);
-		chara.back().vehicle[1].pos = VGet(0.f, 5.f, 0.f);
+		chara.back().vehicle[1].use_id = 0;
+		auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+		chara.back().vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+		chara.back().vehicle[1].mat = RotY(atan2f(-pp.x(), -pp.z()));
 	}
 	for (int i = 0; i < 10; i++) {
 		chara.resize(chara.size()+1);
@@ -429,8 +144,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		chara.back().vehicle[0].pos = VGet(10.f, 1.81f, -2.48f + float(i * 14) - 300.f);
 		chara.back().vehicle[0].yrad = deg2rad(270.f);
 		//飛行機
-		chara.back().vehicle[1].use_id = 1;
-		chara.back().vehicle[1].pos = VGet(10.f, 30.f, -1470.f + float(i * 12));
+		chara.back().vehicle[1].use_id = 0;
+		auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+		chara.back().vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+		chara.back().vehicle[1].mat = RotY(atan2f(-pp.x(), -pp.z()));
 	}
 	for (int i = 0; i < 10; i++) {
 		chara.resize(chara.size() + 1);
@@ -439,8 +156,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		chara.back().vehicle[0].pos = VGet(0.f, 1.81f, -2.48f + float(i * 14) - 300.f);
 		chara.back().vehicle[0].yrad = deg2rad(270.f);
 		//飛行機
-		chara.back().vehicle[1].use_id = 1;
-		chara.back().vehicle[1].pos = VGet(0.f, 30.f, -1470.f + float(i * 12));
+		chara.back().vehicle[1].use_id = 0;
+		auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+		chara.back().vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+		chara.back().vehicle[1].mat = RotY(atan2f(-pp.x(), -pp.z()));
 	}
 	for (int i = 0; i < 10; i++) {
 		chara.resize(chara.size() + 1);
@@ -449,8 +168,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		chara.back().vehicle[0].pos = VGet(-10.f, 1.81f, -2.48f + float(i * 14) - 300.f);
 		chara.back().vehicle[0].yrad = deg2rad(270.f);
 		//飛行機
-		chara.back().vehicle[1].use_id = 1;
-		chara.back().vehicle[1].pos = VGet(-10.f, 30.f, -1470.f + float(i * 12));
+		chara.back().vehicle[1].use_id = 0;
+		auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+		chara.back().vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+		chara.back().vehicle[1].mat = RotY(atan2f(-pp.x(), -pp.z()));
 	}
 	for (int i = 0; i < 10; i++) {
 		chara.resize(chara.size() + 1);
@@ -460,7 +181,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		chara.back().vehicle[0].yrad = deg2rad(270.f);
 		//飛行機
 		chara.back().vehicle[1].use_id = 0;
-		chara.back().vehicle[1].pos = VGet(-20.f, 30.f, -1470.f + float(i * 12));
+		auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+		chara.back().vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+		chara.back().vehicle[1].mat = RotY(atan2f(-pp.x(), -pp.z()));
 	}
 	//
 	fill_id(chara);
@@ -489,7 +212,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							}
 						}
 						//主砲
-						for (auto& p : c.vehicle[0].Gun_[i].Ammo) {
+						for (auto& p : c.vehicle[0].Gun_[i].bullet) {
 							p.color = Drawparts->GetColor(255, 255, 172);
 							p.spec = c.vehicle[0].Gun_[i].Spec[0];
 						}
@@ -526,6 +249,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			c.vehicle[1].use_id = std::clamp<size_t>(c.vehicle[1].use_id, 0, plane.size() - 1);
 			c.useplane.into(plane[c.vehicle[1].use_id]);
 			c.changegear = true;
+			c.landing = false;
 			{
 				MV1AttachAnim(c.useplane.obj.get(), 0);//ダミー
 				c.p_anime_geardown.first = MV1AttachAnim(c.useplane.obj.get(), 1);
@@ -553,9 +277,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 								break;
 							}
 						}
-						for (auto& a : c.vehicle[1].Gun_[i].Ammo) {
-							a.spec = c.vehicle[1].Gun_[i].Spec[0];
+						for (auto& a : c.vehicle[1].Gun_[i].bullet) {
 							a.color = Drawparts->GetColor(255, 255, 172);
+							a.spec = c.vehicle[1].Gun_[i].Spec[0];
 						}
 					}
 				}
@@ -570,7 +294,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 		}
-		c.vehicle[1].mat = MGetIdent();
+		carrier.SetFrameLocalMatrix(catapult[0].first + 2, RotX(deg2rad(-75))*catapult[0].second.Mtrans());
+
 		c.vehicle[1].xradadd_right = 0.f;
 		c.vehicle[1].xradadd_left = 0.f;
 		c.vehicle[1].yradadd_left = 0.f;
@@ -582,7 +307,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		c.vehicle[1].speed = 0.f;
 		c.vehicle[1].add = VGet(0.f, 0.f, 0.f);
 
-		c.flight = //true;
+		c.flight =
+			//true;
 			false;
 	}
 	for (auto& c : chara) {
@@ -662,7 +388,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		for (auto& c : chara) {
 			for (auto& gns : c.vehicle) {
 				for (auto& g : gns.Gun_) {
-					for (auto& a : g.Ammo) {
+					for (auto& a : g.bullet) {
 						if (a.flug) {
 							SetDrawBlendMode(DX_BLENDMODE_ALPHA, (int)(255.f * std::clamp<float>((a.spec.speed - 100.f) / (200.f - 100.f), 0.f, 1.f)));
 							DrawCapsule3D(a.pos.get(), a.repos.get(), ((a.spec.caliber - 0.00762f)*0.1f + 0.00762f) * ((a.pos - campos).size() / 24.f), 4, a.color, color, TRUE);//7.62mm用
@@ -676,60 +402,55 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);			// 描画ブレンドモードを戻す
 	};
 	//射撃関数(仮)
-	auto shoot = [](const bool& model,hit::Chara* c,const VECTOR_ref& pos, const VECTOR_ref& vec, const float& fps) {
-		if (model) {//戦車
-			if (!c->flight) {
-				for (int i = 0; i < c->vehicle[0].Gun_.size(); i++) {
-					auto& cg = c->vehicle[0].Gun_[i];
-					if (c->key[(i == 0) ? 0 : 1] && cg.loadcnt == 0) {
-						auto& u = cg.Ammo[cg.useammo];
-						cg.useammo++;
-						cg.useammo %= cg.Ammo.size();
-						//ココだけ変化
-						u.spec = cg.Spec[0];
-						u.pos = c->usetank.obj.frame(cg.gun_info.frame2.first);
-						u.vec = (c->usetank.obj.frame(cg.gun_info.frame3.first) - c->usetank.obj.frame(cg.gun_info.frame2.first)).Norm();
-						//
-						cg.loadcnt = cg.loadcnt_all;
-						if (i == 0) {
-							cg.fired = 1.f;
-						}
-						u.hit = false;
-						u.flug = true;
-						u.cnt = 0.f;
-						u.yadd = 0.f;
-						u.repos = u.pos;
-						set_effect(&c->effcs[ef_fire], c->usetank.obj.frame(cg.gun_info.frame3.first), u.vec, u.spec.caliber / 0.1f);
+	auto shoot = [](hit::Chara* c, const float& fps) {
+		if (!c->flight) {//戦車
+			for (int i = 0; i < c->vehicle[0].Gun_.size(); i++) {
+				auto& cg = c->vehicle[0].Gun_[i];
+				if (c->key[(i == 0) ? 0 : 1] && cg.loadcnt == 0) {
+					auto& u = cg.bullet[cg.usebullet];
+					++cg.usebullet %= cg.bullet.size();
+					//ココだけ変化
+					u.spec = cg.Spec[0];
+					u.pos = c->usetank.obj.frame(cg.gun_info.frame2.first);
+					u.vec = (c->usetank.obj.frame(cg.gun_info.frame3.first) - c->usetank.obj.frame(cg.gun_info.frame2.first)).Norm();
+					//
+					cg.loadcnt = cg.loadcnt_all;
+					if (i == 0) {
+						cg.fired = 1.f;
 					}
-					cg.loadcnt = std::max(cg.loadcnt - 1.f / fps, 0.f);
-					cg.fired = std::max(cg.fired - 1.f / fps, 0.f);
+					u.hit = false;
+					u.flug = true;
+					u.cnt = 0.f;
+					u.yadd = 0.f;
+					u.repos = u.pos;
+					set_effect(&c->effcs[ef_fire], c->usetank.obj.frame(cg.gun_info.frame3.first), u.vec, u.spec.caliber / 0.1f);
 				}
+				cg.loadcnt = std::max(cg.loadcnt - 1.f / fps, 0.f);
+				cg.fired = std::max(cg.fired - 1.f / fps, 0.f);
 			}
 		}
 		else {//飛行機
-			if (c->flight) {
-				for (auto& cg : c->vehicle[1].Gun_) {
-					if (c->key[0] && cg.loadcnt == 0) {
-						auto& u = cg.Ammo[cg.useammo];
-						cg.useammo++;
-						cg.useammo %= cg.Ammo.size();
-						//ココだけ変化
-						u.spec = cg.Spec[0];
-						u.pos = pos;
-						u.vec = vec;
-						//
-						cg.loadcnt = cg.loadcnt_all;
-						cg.fired = 1.f;
-						u.hit = false;
-						u.flug = true;
-						u.cnt = 0.f;
-						u.yadd = 0.f;
-						u.repos = u.pos;
-						set_effect(&c->effcs[ef_fire], c->vehicle[1].pos, u.vec, u.spec.caliber / 0.1f);
-					}
-					cg.loadcnt = std::max(cg.loadcnt - 1.f / fps, 0.f);
-					cg.fired = std::max(cg.fired - 1.f / fps, 0.f);
+			for (int i = 0; i < c->vehicle[1].Gun_.size(); i++) {
+				auto& cg = c->vehicle[1].Gun_[i];
+				if (c->key[(i == 0) ? 0 : 1] && cg.loadcnt == 0) {
+					auto& u = cg.bullet[cg.usebullet];
+					++cg.usebullet %= cg.bullet.size();
+					//ココだけ変化
+					u.spec = cg.Spec[0];
+					u.pos = c->useplane.obj.frame(cg.gun_info.frame2.first);
+					u.vec = (c->useplane.obj.frame(cg.gun_info.frame3.first) - c->useplane.obj.frame(cg.gun_info.frame2.first)).Norm();
+					//
+					cg.loadcnt = cg.loadcnt_all;
+					cg.fired = 1.f;
+					u.hit = false;
+					u.flug = true;
+					u.cnt = 0.f;
+					u.yadd = 0.f;
+					u.repos = u.pos;
+					set_effect(&c->effcs[ef_fire], c->useplane.obj.frame(cg.gun_info.frame3.first), u.vec, u.spec.caliber / 0.1f);
 				}
+				cg.loadcnt = std::max(cg.loadcnt - 1.f / fps, 0.f);
+				cg.fired = std::max(cg.fired - 1.f / fps, 0.f);
 			}
 		}
 	};
@@ -740,8 +461,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				continue;
 			}
 			if (!t.vehicle[0].hit_check) {
-				t.usetank.col.SetPosition(t.vehicle[0].pos);
-				t.usetank.col.SetRotationZYAxis(t.zvec, t.yvec, 0.f);
+				t.usetank.col.SetMatrix(t.vehicle[0].mat*t.vehicle[0].pos.Mtrans());
 				for (int i = 0; i < t.usetank.col.mesh_num(); i++) {
 					t.usetank.col.RefreshCollInfo(-1, i);
 				}
@@ -765,7 +485,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	locktrt = false;
 	Rot = 0;
 	ratio = 1.f;
-	range = 1.f;
 	range_p = 5.f;
 	eye_xrad = 0.f;
 	eye_yrad = -mine.vehicle[0].yrad;
@@ -821,81 +540,60 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//視点
 		{
 			//スコープ
-			auto oldads = ads;
-			if (!mine.flight) {
-				Rot = std::clamp(Rot + GetMouseWheelRotVol(), 0, 7);
-				switch (Rot) {
-				case 7:
-					ads = true;
-					ratio = 40.f;
-					range_p = 1.f;
-					break;
-				case 6:
-					ads = true;
-					ratio = 20.f;
-					range_p = 1.f;
-					break;
-				case 5:
-					ads = true;
-					ratio = 10.f;
-					range_p = 1.f;
-					break;
-				case 4:
-					ads = true;
-					ratio = 5.f;
-					range_p = 1.f;
-					break;
-				case 3:
-					ads = true;
-					ratio = 1.f;
-					range_p = 1.f;
-					break;
-				case 2:
-					ads = false;
-					ratio = 1.f;
-					range_p = 1.f;
-					break;
-				case 1:
-					ads = false;
-					ratio = 1.f;
-					range_p = 7.5f;
-					break;
-				case 0:
-					ads = false;
-					ratio = 1.f;
-					range_p = 15.f;
-					break;
-				}
-			}
-			else {
-				Rot = std::clamp(Rot + GetMouseWheelRotVol(), 0, 2);
-				switch (Rot) {
-				case 2:
-					ads = false;
-					ratio = 1.f;
-					range_p = 1.f;
-					break;
-				case 1:
-					ads = false;
-					ratio = 1.f;
-					range_p = 15.f;
-					break;
-				case 0:
-					ads = false;
-					ratio = 1.f;
-					range_p = 30.f;
-					break;
-				}
+			{
+				if (!mine.flight) {
+					Rot = std::clamp(Rot + GetMouseWheelRotVol(), 0, 7);
 
-			}
-			if (ads) {
-				range = range_p;
-			}
-			else {
-				range += (range_p - range)*0.05f;
-			}
-			if (ads != oldads) {
-				eyevec = vec_a;
+					switch (Rot) {
+					case 2:
+						range_p = 1.f;
+						break;
+					case 1:
+						range_p = 7.5f;
+						break;
+					case 0:
+						range_p = 15.f;
+						break;
+					}
+
+					ratio = 1.f;
+					for (int i = 3; i < Rot; i++) {
+						ratio *= 5.f;
+					}
+
+				}
+				else {
+					Rot = std::clamp(Rot + GetMouseWheelRotVol(), 0, 2);
+					switch (Rot) {
+					case 2:
+						range_p = 1.f;
+						break;
+					case 1:
+						range_p = 15.f;
+						break;
+					case 0:
+						range_p = 30.f;
+						break;
+					}
+
+					ratio = 1.f;
+				}
+				auto oldads = ads;
+				ads = (Rot >= 3);
+				if (ads != oldads) {
+					eyevec = vec_a;
+					eye_xrad = std::asinf(eyevec.y());
+					if (sin(eye_xrad) == 0.f) {
+						eye_yrad = std::asinf(eyevec.x() / sin(eye_xrad));
+					}
+					else {
+						eye_yrad = std::acosf(eyevec.z() / cos(eye_xrad));
+					}
+				}
+				if (ads) {
+					range_p = 1.f;
+				}
+				easing_set(&range, range_p, (ads) ? 0.f : 0.95f, fps);
 			}
 			//砲塔旋回
 			{
@@ -942,35 +640,43 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 			}
 			//キー
-			mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);//射撃
-			mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0);//マシンガン
-			mine.key[2] = (CheckHitKey(KEY_INPUT_W) != 0);
-			mine.key[3] = (CheckHitKey(KEY_INPUT_S) != 0);
-			mine.key[4] = (CheckHitKey(KEY_INPUT_D) != 0);
-			mine.key[5] = (CheckHitKey(KEY_INPUT_A) != 0);
-			//飛行時のみの操作
-			if (mine.flight) {
-				//ヨー
-				mine.key[6] = (CheckHitKey(KEY_INPUT_Q) != 0);
-				mine.key[7] = (CheckHitKey(KEY_INPUT_E) != 0);
-				//スロットル
-				mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
-				mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
-				//脚
-				mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
-				mine.key[11] = (CheckHitKey(KEY_INPUT_G) != 0);
-			}
-			//飛行への移行
 			{
-				if (!mine.flight) {
-					if (CheckHitKey(KEY_INPUT_P) != 0) {
-						{
-							auto tmp = VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(mine.vehicle[1].mat);
-							eye_xrad = atan2f(tmp.y(), std::hypotf(tmp.x(), tmp.z()));
-							eye_yrad = atan2f(tmp.x(), tmp.z());
+				mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);//射撃
+				mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0);//マシンガン
+				mine.key[2] = (CheckHitKey(KEY_INPUT_W) != 0);
+				mine.key[3] = (CheckHitKey(KEY_INPUT_S) != 0);
+				mine.key[4] = (CheckHitKey(KEY_INPUT_D) != 0);
+				mine.key[5] = (CheckHitKey(KEY_INPUT_A) != 0);
+				//飛行時のみの操作
+				if (mine.flight) {
+					//ヨー
+					mine.key[6] = (CheckHitKey(KEY_INPUT_Q) != 0);
+					mine.key[7] = (CheckHitKey(KEY_INPUT_E) != 0);
+					//スロットル
+					mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
+					mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
+					//脚
+					mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
+					mine.key[11] = (CheckHitKey(KEY_INPUT_G) != 0);
+					//精密操作
+					mine.key[12] = (CheckHitKey(KEY_INPUT_LSHIFT) != 0);
+					//着艦フックスイッチ
+					mine.key[13] = (CheckHitKey(KEY_INPUT_X) != 0);
+					//カタパルト
+					mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
+				}
+				//飛行への移行
+				{
+					if (!mine.flight) {
+						if (CheckHitKey(KEY_INPUT_P) != 0) {
+							{
+								auto tmp = VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(mine.vehicle[1].mat);
+								eye_xrad = atan2f(tmp.y(), std::hypotf(tmp.x(), tmp.z()));
+								eye_yrad = atan2f(tmp.x(), tmp.z());
+							}
+							mine.vehicle[0].add = VGet(0.f, 0.f, 0.f);
+							mine.flight = true;
 						}
-						mine.vehicle[0].add = VGet(0.f, 0.f, 0.f);
-						mine.flight = true;
 					}
 				}
 			}
@@ -981,18 +687,25 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				SetMousePoint(dispx / 2, dispy / 2);
 				if (ads) {
 					eye_xrad = std::clamp(eye_xrad + deg2rad(float(mousey - dispy / 2)*0.1f / ratio), deg2rad(-20), deg2rad(10));
+					//eye_xrad += deg2rad(float(mousey - dispy / 2)*0.1f);
 					eye_yrad += deg2rad(float(mousex - dispx / 2)*0.1f / ratio);
 				}
 				else {
 					eye_xrad = std::clamp(eye_xrad + deg2rad(float(mousey - dispy / 2)*0.1f), deg2rad(-25), deg2rad(89));
+					//eye_xrad += deg2rad(float(mousey - dispy / 2)*0.1f);
 					eye_yrad += deg2rad(float(mousex - dispx / 2)*0.1f);
 				}
 				eyevec = VGet(cos(eye_xrad)*sin(eye_yrad), sin(eye_xrad), cos(eye_xrad)*cos(eye_yrad));
 			}
 		}
+		{
+			//他のキー入力をここで取得(ホスト)
+		}
 		//反映
 		for (auto& c : chara) {
+			//戦車演算
 			{
+				VECTOR_ref yvec,zvec;
 				//砲塔旋回
 				{
 					float limit = deg2rad(c.usetank.turret_rad_limit) / fps;
@@ -1015,33 +728,39 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 				}
 				//転輪
-				for (auto& f : c.usetank.wheelframe) {
-					MATRIX_ref tmp;
-					c.usetank.obj.frame_reset(f.frame.first);
-					auto startpos = c.usetank.obj.frame(f.frame.first);
-					auto hp = map_col.CollCheck_Line(startpos + c.yvec.Scale((-f.frame.second.y()) + 2.f), startpos + c.yvec.Scale((-f.frame.second.y()) - 0.3f), 0, 0);
-					if (hp.HitFlag == TRUE) {
-						tmp = VECTOR_ref(VGet(0.f, hp.HitPosition.y + c.yvec.y()*f.frame.second.y() - startpos.y(), 0.f)).Mtrans();
-					}
-					else {
-						tmp = VECTOR_ref(VGet(0.f, -0.3f, 0.f)).Mtrans();
-					}
+				{
+					auto y_vec = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(c.vehicle[0].mat);
+					for (auto& f : c.usetank.wheelframe) {
+						MATRIX_ref tmp;
+						c.usetank.obj.frame_reset(f.frame.first);
+						auto startpos = c.usetank.obj.frame(f.frame.first);
+						auto hp = map_col.CollCheck_Line(startpos + y_vec.Scale((-f.frame.second.y()) + 2.f), startpos + y_vec.Scale((-f.frame.second.y()) - 0.3f), 0, 0);
+						if (hp.HitFlag == TRUE) {
+							tmp = VECTOR_ref(VGet(0.f, hp.HitPosition.y + y_vec.y()*f.frame.second.y() - startpos.y(), 0.f)).Mtrans();
+						}
+						else {
+							tmp = VECTOR_ref(VGet(0.f, -0.3f, 0.f)).Mtrans();
+						}
 
-					c.usetank.obj.SetFrameLocalMatrix(f.frame.first, RotX((f.frame.second.x() >= 0) ? c.wheel_Left : c.wheel_Right)*tmp*f.frame.second.Mtrans());
+						c.usetank.obj.SetFrameLocalMatrix(f.frame.first, RotX((f.frame.second.x() >= 0) ? c.wheel_Left : c.wheel_Right)*tmp*f.frame.second.Mtrans());
+					}
 				}
-				c.wheel_normal += (((c.usetank.obj.frame(c.usetank.square[0]) - c.usetank.obj.frame(c.usetank.square[3])) * (c.usetank.obj.frame(c.usetank.square[1]) - c.usetank.obj.frame(c.usetank.square[2]))).Norm() - c.wheel_normal).Scale(0.05f);
+				easing_set(
+					&c.wheel_normal,
+					((c.usetank.obj.frame(c.usetank.square[0]) - c.usetank.obj.frame(c.usetank.square[3])) * (c.usetank.obj.frame(c.usetank.square[1]) - c.usetank.obj.frame(c.usetank.square[2]))).Norm(),
+					0.95f, fps);
 				//移動
 				auto hp = map_col.CollCheck_Line(c.vehicle[0].pos + VGet(0.f, 2.f, 0.f), c.vehicle[0].pos - VGet(0.f, 0.1f, 0.f), 0, 0);
 				auto isfloat = (c.vehicle[0].pos.y() == -c.usetank.down_in_water / 2.f);
 				//Z、Yベクトル取得
 				{
-					c.zvec = VGet(sinf(c.vehicle[0].yrad), 0.f, cosf(c.vehicle[0].yrad));
+					zvec = VGet(sinf(c.vehicle[0].yrad), 0.f, cosf(c.vehicle[0].yrad));
 					if (c.usetank.isfloat && isfloat) {
-						c.yvec = VGet(0.f, 1.f, 0.f);
+						yvec = VGet(0.f, 1.f, 0.f);
 					}
 					else {
-						c.yvec = c.wheel_normal;
-						c.zvec = c.zvec.Vtrans(MGetRotVec2(VGet(0.f, 1.f, 0.f), c.yvec.get()));
+						yvec = c.wheel_normal;
+						zvec = zvec.Vtrans(MGetRotVec2(VGet(0.f, 1.f, 0.f), yvec.get()));
 					}
 				}
 				if (hp.HitFlag == TRUE || (c.usetank.isfloat && isfloat)) {
@@ -1061,7 +780,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 							c.vehicle[0].speed_sub = (c.vehicle[0].speed_sub < 0.f) ? (c.vehicle[0].speed_sub + (0.05f / 3.6f)*(420.f / fps)) : 0.f;
 						}
 						c.vehicle[0].speed = (old + ((c.vehicle[0].speed_add + c.vehicle[0].speed_sub) - old)*0.1f) / fps;
-						c.vehicle[0].add = c.zvec.Scale(-c.vehicle[0].speed);
+						c.vehicle[0].add = zvec.Scale(-c.vehicle[0].speed);
 					}
 					//旋回
 					{
@@ -1076,22 +795,24 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					//慣性
 					{
-						auto xradold = c.vehicle[0].xradadd;
+						const auto xradold = c.vehicle[0].xradadd;
 						c.vehicle[0].xradadd = deg2rad(-(c.vehicle[0].speed / (420.f / fps)) / ((0.1f / 3.6f) / fps)*30.f);
-						c.vehicle[0].xrad += (std::clamp(c.vehicle[0].xradadd - xradold, deg2rad(-15.f), deg2rad(15.f)) - c.vehicle[0].xrad)*(1.f - powf(0.995f, 60.f / fps));
+						easing_set(&c.vehicle[0].xrad, std::clamp(c.vehicle[0].xradadd - xradold, deg2rad(-15.f), deg2rad(15.f)), 0.995f, fps);
 						c.vehicle[0].xrad = std::clamp(c.vehicle[0].xrad, deg2rad(-7.5f), deg2rad(7.5f));
-						MATRIX_ref avm = (c.zvec*c.yvec).GetRotAxis(c.vehicle[0].xrad);
-						c.yvec = c.yvec.Vtrans(avm);
-						c.zvec = c.zvec.Vtrans(avm);
+						MATRIX_ref avm = (zvec*yvec).GetRotAxis(c.vehicle[0].xrad);
+						yvec = yvec.Vtrans(avm);
+						zvec = zvec.Vtrans(avm);
 						auto zradold = c.vehicle[0].zradadd;
 						c.vehicle[0].zradadd = deg2rad(-c.vehicle[0].yradadd / (deg2rad(5.f) / fps)*30.f);
 						c.vehicle[0].zrad += ((c.vehicle[0].zradadd - zradold) - c.vehicle[0].zrad)*0.005f;
-						MATRIX_ref bvm = c.zvec.GetRotAxis(c.vehicle[0].zrad);
-						c.yvec = c.yvec.Vtrans(bvm);
-						c.zvec = c.zvec.Vtrans(bvm);
+						MATRIX_ref bvm = zvec.GetRotAxis(c.vehicle[0].zrad);
+						yvec = yvec.Vtrans(bvm);
+						zvec = zvec.Vtrans(bvm);
 					}
 					if (hp.HitFlag == TRUE) {
-						c.vehicle[0].pos.yadd((hp.HitPosition.y - c.vehicle[0].pos.y())*(1.f - powf(0.9f, 60.f / fps)));
+						auto yp = c.vehicle[0].pos.y();
+						easing_set(&yp, hp.HitPosition.y, 0.9f, fps);
+						c.vehicle[0].pos.y(yp);
 					}
 				}
 				else {
@@ -1099,15 +820,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				//射撃反動
 				{
-					c.xrad_shot += (deg2rad(-c.vehicle[0].Gun_[0].fired*c.vehicle[0].Gun_[0].Spec[0].caliber*50.f)*cos(c.vehicle[0].Gun_[0].gun_info.yrad) - c.xrad_shot)*(1.f - powf(0.85f, 60.f / fps));
-					MATRIX_ref avm = (c.zvec*c.yvec).GetRotAxis(c.xrad_shot);
-					c.yvec = c.yvec.Vtrans(avm);
-					c.zvec = c.zvec.Vtrans(avm);
-					c.zrad_shot += (deg2rad(-c.vehicle[0].Gun_[0].fired*c.vehicle[0].Gun_[0].Spec[0].caliber*50.f)*sin(c.vehicle[0].Gun_[0].gun_info.yrad) - c.zrad_shot)*(1.f - powf(0.85f, 60.f / fps));
-					MATRIX_ref bvm = c.zvec.GetRotAxis(c.zrad_shot);
-					c.yvec = c.yvec.Vtrans(bvm);
-					c.zvec = c.zvec.Vtrans(bvm);
+					easing_set(&c.xrad_shot, deg2rad(-c.vehicle[0].Gun_[0].fired*c.vehicle[0].Gun_[0].Spec[0].caliber*50.f)*cos(c.vehicle[0].Gun_[0].gun_info.yrad), 0.85f, fps);
+					MATRIX_ref avm = (zvec*yvec).GetRotAxis(c.xrad_shot);
+					easing_set(&c.zrad_shot, deg2rad(-c.vehicle[0].Gun_[0].fired*c.vehicle[0].Gun_[0].Spec[0].caliber*50.f)*sin(c.vehicle[0].Gun_[0].gun_info.yrad), 0.85f, fps);
+					MATRIX_ref bvm = zvec.GetRotAxis(c.zrad_shot);
+
+					yvec = yvec.Vtrans(avm*bvm);
+					zvec = zvec.Vtrans(avm*bvm);
 				}
+				//行列
+				c.vehicle[0].mat = Axis1(yvec*zvec, yvec, zvec);
 				//浮く
 				if (c.usetank.isfloat) {
 					c.vehicle[0].pos.y(std::max(c.vehicle[0].pos.y(), -c.usetank.down_in_water / 2.f));
@@ -1116,35 +838,32 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				c.wheel_Left -= c.vehicle[0].speed *2.f - c.vehicle[0].yradadd * 5.f;
 				c.wheel_Right -= c.vehicle[0].speed *2.f + c.vehicle[0].yradadd * 5.f;
 				//射撃
-				shoot(true, &c, c.vehicle[1].pos, VECTOR_ref(VGet(0.f, 0.f, -1.f)).Vtrans(c.vehicle[1].mat), fps);
+				shoot(&c, fps);
 			}
-			if (c.flight){
+			{
 				//飛行機
-				float rad_spec = deg2rad(c.useplane.rad_limit*(c.useplane.mid_speed_limit / c.vehicle[1].speed));
+				float rad_spec = deg2rad(c.useplane.body_rad_limit*(c.useplane.mid_speed_limit / c.vehicle[1].speed));
 				if (c.vehicle[1].speed < c.useplane.min_speed_limit) {
-					rad_spec = deg2rad(c.useplane.rad_limit*(std::clamp(c.vehicle[1].speed, 0.f, c.useplane.min_speed_limit) / c.useplane.min_speed_limit));
+					rad_spec = deg2rad(c.useplane.body_rad_limit*(std::clamp(c.vehicle[1].speed, 0.f, c.useplane.min_speed_limit) / c.useplane.min_speed_limit));
 				}
 				//ピッチ
-				c.vehicle[1].xradadd_right += (((c.key[2]) ? -rad_spec / 4.f : 0.f) - c.vehicle[1].xradadd_right)*(1.f - powf(0.95f, 60.f / fps));
-				c.vehicle[1].xradadd_left += (((c.key[3]) ? rad_spec / 4.f : 0.f) - c.vehicle[1].xradadd_left)*(1.f - powf(0.95f, 60.f / fps));
+				easing_set(&c.vehicle[1].xradadd_right, ((c.key[2] && c.flight) ? -(c.key[12] ? rad_spec / 12.f : rad_spec / 4.f) : 0.f), 0.95f, fps);
+				easing_set(&c.vehicle[1].xradadd_left , ((c.key[3] && c.flight) ?  (c.key[12] ? rad_spec / 12.f : rad_spec / 4.f) : 0.f), 0.95f, fps);
 				//ロール
-				c.vehicle[1].zradadd_right += (((c.key[4]) ? rad_spec : 0.f) - c.vehicle[1].zradadd_right)*(1.f - powf(0.95f, 60.f / fps));
-				c.vehicle[1].zradadd_left += (((c.key[5]) ? -rad_spec : 0.f) - c.vehicle[1].zradadd_left)*(1.f - powf(0.95f, 60.f / fps));
+				easing_set(&c.vehicle[1].zradadd_right, ((c.key[4] && c.flight) ?  (c.key[12] ? rad_spec / 3.f : rad_spec) : 0.f), 0.95f, fps);
+				easing_set(&c.vehicle[1].zradadd_left , ((c.key[5] && c.flight) ? -(c.key[12] ? rad_spec / 3.f : rad_spec) : 0.f), 0.95f, fps);
 				//ヨー
-				c.vehicle[1].yradadd_left += (((c.key[6])  ? -rad_spec / 8.f : 0.f) - c.vehicle[1].yradadd_left)*(1.f - powf(0.95f, 60.f / fps));
-				c.vehicle[1].yradadd_right += (((c.key[7]) ? rad_spec / 8.f : 0.f) - c.vehicle[1].yradadd_right)*(1.f - powf(0.95f, 60.f / fps));
+				easing_set(&c.vehicle[1].yradadd_left , ((c.key[6] && c.flight) ? -(c.key[12] ? rad_spec / 24.f : rad_spec / 8.f) : 0.f), 0.95f, fps);
+				easing_set(&c.vehicle[1].yradadd_right, ((c.key[7] && c.flight) ?  (c.key[12] ? rad_spec / 24.f : rad_spec / 8.f) : 0.f), 0.95f, fps);
 				//スロットル
-				c.vehicle[1].speed_add += (((c.key[8] && c.vehicle[1].speed < c.useplane.max_speed_limit) ? ( 0.5f / 3.6f) : 0.f) - c.vehicle[1].speed_add)*(1.f - powf(0.95f, 60.f / fps));
-				c.vehicle[1].speed_sub += (((c.key[9] && c.vehicle[1].speed > c.useplane.min_speed_limit) ? 
-					(-0.5f / 3.6f) : 
-					((c.key[9] && c.vehicle[1].speed > 0.f) ? (-0.2f / 3.6f) : 0.f)
-					) - c.vehicle[1].speed_sub)*(1.f - powf(0.95f, 60.f / fps));
+				easing_set(&c.vehicle[1].speed_add, (((c.key[8] && c.flight) && c.vehicle[1].speed < c.useplane.max_speed_limit) ? (0.5f / 3.6f) : 0.f), 0.95f, fps);
+				easing_set(&c.vehicle[1].speed_sub, (c.key[9] && c.flight) ? ((c.vehicle[1].speed > c.useplane.min_speed_limit) ? (-0.5f / 3.6f) : ((c.vehicle[1].speed > 0.f) ? (-0.2f / 3.6f) : 0.f)) : 0.f, 0.95f, fps);
 				//スピード
-				c.vehicle[1].speed += c.vehicle[1].speed_add + c.vehicle[1].speed_sub;
+				c.vehicle[1].speed += (c.vehicle[1].speed_add + c.vehicle[1].speed_sub)*60.f / fps;
 				{
 					auto tmp = VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(c.vehicle[1].mat);
 					auto tmp2 = sin(atan2f(tmp.y(), std::hypotf(tmp.x(), tmp.z())));
-					c.vehicle[1].speed += ((std::abs(tmp2)>sin(deg2rad(1.0f))) ? tmp2*0.5f : 0.f) / 3.6f;	//落下
+					c.vehicle[1].speed += (((std::abs(tmp2) > sin(deg2rad(1.0f))) ? tmp2 * 0.5f : 0.f) / 3.6f)*60.f / fps;	//落下
 				}
 				//座標系反映
 				{
@@ -1153,31 +872,75 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					c.vehicle[1].mat *= VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(t_mat).GetRotAxis((c.vehicle[1].zradadd_right + c.vehicle[1].zradadd_left) / fps);
 					c.vehicle[1].mat *= VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(t_mat).GetRotAxis((c.vehicle[1].yradadd_left + c.vehicle[1].yradadd_right) / fps);
 				}
+				//
+				c.landing_cnt = std::min<uint8_t>(c.landing_cnt + 1, (c.key[13] && c.flight) ? 2 : 0);
+				if (c.landing_cnt == 1) {
+					c.landing ^= 1;
+				}
 				//脚
-				c.changegear_cnt = std::min<uint8_t>(c.changegear_cnt + 1, (c.key[10]) ? 2 : 0);
+				c.changegear_cnt = std::min<uint8_t>(c.changegear_cnt + 1, (c.key[10] && c.flight) ? 2 : 0);
 				if (c.changegear_cnt == 1) {
 					c.changegear ^= 1;
 				}
-				c.p_anime_geardown.second += (float(c.changegear) - c.p_anime_geardown.second)*(1.f - powf(0.9f, 60.f / fps));
+				easing_set(&c.p_anime_geardown.second, float(c.changegear), 0.95f, fps);
 				MV1SetAttachAnimBlendRate(c.useplane.obj.get(), c.p_anime_geardown.first, c.p_anime_geardown.second);
 				//舵
 				for (int i = 0; i < c.p_animes_rudder.size(); i++) {
-					c.p_animes_rudder[i].second += (float(c.key[i+2]) - c.p_animes_rudder[i].second)*(1.f - powf(0.95f, 60.f / fps));
+					easing_set(&c.p_animes_rudder[i].second, float(c.key[i+2] && c.flight), 0.95f, fps);
 					MV1SetAttachAnimBlendRate(c.useplane.obj.get(), c.p_animes_rudder[i].first, c.p_animes_rudder[i].second);
 				}
 				//
 				{
 					//
 					if (c.vehicle[1].speed >= c.useplane.min_speed_limit) {
-						c.vehicle[1].add = c.vehicle[1].add.Scale(powf(0.9f, 60.f / fps));
+						easing_set(&c.vehicle[1].add, VGet(0.f, 0.f, 0.f), 0.9f, fps);
 					}
 					else {
 						c.vehicle[1].add.yadd(-9.8f / powf(fps, 2.f));
 					}
-					//c.useplane.obj.SetFrameLocalMatrix(c.useplane.hook.first, RotX(deg2rad(60.f*c.p_anime_geardown.second))*c.useplane.hook.second.Mtrans());//着艦フック
+
+					//着艦ワイヤ-処理
+					{
+						c.useplane.obj.frame_reset(c.useplane.hook.first);
+						c.useplane.obj.SetFrameLocalMatrix(c.useplane.hook.first, RotX(deg2rad(c.p_landing_per))*c.useplane.hook.second.Mtrans());
+						easing_set(&c.p_landing_per, (c.landing) ? 20.f : 0.f, 0.95f, fps);
+						if (c.landing) {
+							bool to = false;
+							for (auto& wi : wire) {
+								carrier.frame_reset(wi.first);
+								if ((c.useplane.obj.frame(c.useplane.hook.first + 1) - carrier.frame(wi.first)).size() <= 30.f) {
+									VECTOR_ref vec1 = (c.useplane.obj.frame(c.useplane.hook.first + 1) - c.useplane.obj.frame(c.useplane.hook.first)).Norm();
+									VECTOR_ref vec2 = (carrier.frame(wi.first) - c.useplane.obj.frame(c.useplane.hook.first)).Norm();
+									if (vec1%vec2 >= 0) {
+										to = true;
+										/*
+										c.useplane.obj.SetFrameLocalMatrix(c.useplane.hook.first,
+											(
+												MATRIX_ref(MGetRotVec2(vec1.get(), vec2.get()))
+												)
+											*c.useplane.hook.second.Mtrans()
+										);
+										*/
+										carrier.SetFrameLocalMatrix(wi.first,
+											(
+											(c.useplane.obj.frame(c.useplane.hook.first + 1) - carrier.frame(wi.first)).Mtrans()
+												*c.vehicle[1].mat.Inverse()
+												)
+											*wi.second.Mtrans()
+										);
+										break;
+									}
+								}
+							}
+							if (to && c.vehicle[1].speed > 0.f) {
+								c.vehicle[1].speed += -2.5f / 3.6f;
+							}
+						}
+					}
+
 					if (c.p_anime_geardown.second >= 0.5f) {
 						for (auto& w : c.useplane.wheelframe) {
-							w.gndsmksize *= powf(0.9f, 60.f / fps);
+							easing_set(&w.gndsmksize, 0.f, 0.9f, fps);
 							auto tmp = c.useplane.obj.frame(int(w.frame.first + 1));
 							{
 								auto hp = map_col.CollCheck_Line(tmp + VECTOR_ref(VGet(0.f, 0.98f, 0.f)).Vtrans(c.vehicle[1].mat), tmp, 0, 0);
@@ -1187,7 +950,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 										auto x_vec = VECTOR_ref(VGet(1.f, 0.f, 0.f)).Vtrans(c.vehicle[1].mat);
 										auto y_vec = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(c.vehicle[1].mat);
 										auto z_vec = VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(c.vehicle[1].mat);
-										auto normal = y_vec + (VECTOR_ref(hp.Normal) - y_vec).Scale(1.f - powf(0.95f, 60.f / fps));
+
+										auto y_vec2 = y_vec;
+										easing_set(&y_vec2, hp.Normal, 0.95f, fps);
+										auto normal = y_vec2;
 
 										c.vehicle[1].mat = Axis1(
 											x_vec.Vtrans(MGetRotVec2(y_vec.get(), normal.get())),
@@ -1196,11 +962,11 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 										);
 									}
 									w.gndsmksize = std::clamp(c.vehicle[1].speed*3.6f / 50.f, 0.1f, 1.f);
-									if (c.vehicle[1].speed >= 0.f && c.key[11]) {
+									if (c.vehicle[1].speed >= 0.f && (c.key[11] && c.flight)) {
 										c.vehicle[1].speed += -0.5f / 3.6f;
 									}
 									if (c.vehicle[1].speed <= 0.f) {
-										c.vehicle[1].speed *= powf(0.9f, 60.f / fps);
+										easing_set(&c.vehicle[1].speed, 0.f, 0.9f, fps);
 									}
 								}
 							}
@@ -1212,7 +978,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 										auto x_vec = VECTOR_ref(VGet(1.f, 0.f, 0.f)).Vtrans(c.vehicle[1].mat);
 										auto y_vec = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(c.vehicle[1].mat);
 										auto z_vec = VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(c.vehicle[1].mat);
-										auto normal = y_vec + (VECTOR_ref(hp.Normal) - y_vec).Scale(1.f - powf(0.95f, 60.f / fps));
+
+										auto y_vec2 = y_vec;
+										easing_set(&y_vec2, hp.Normal, 0.95f, fps);
+										auto normal = y_vec2;
 
 										c.vehicle[1].mat = Axis1(
 											x_vec.Vtrans(MGetRotVec2(y_vec.get(), normal.get())),
@@ -1221,48 +990,19 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 										);
 
 									}
-									c.vehicle[1].add += car_pos_add;
-									c.vehicle[1].add += ((c.vehicle[1].pos - car_pos).Vtrans(RotY(car_yrad_add)) - (c.vehicle[1].pos - car_pos));
+									c.vehicle[1].add += car_pos_add + ((c.vehicle[1].pos - car_pos).Vtrans(RotY(car_yrad_add)) - (c.vehicle[1].pos - car_pos));
 									c.vehicle[1].mat *= RotY(car_yrad_add);
-									{
-										//着艦ワイヤ-処理
-										bool to = false;
-										for (auto& wi : wire) {
-											carrier.frame_reset(wi.first);
-											if ((c.useplane.obj.frame(c.useplane.hook.first + 1) - carrier.frame(wi.first)).size() <= 20.f) {
-												VECTOR_ref vec1 = (c.useplane.obj.frame(c.useplane.hook.first + 1) - c.useplane.obj.frame(c.useplane.hook.first)).Norm();
-												VECTOR_ref vec2 = (carrier.frame(wi.first) - c.useplane.obj.frame(c.useplane.hook.first)).Norm();
-												if (vec1%vec2 >= 0) {
-													to = true;
-													c.useplane.obj.frame_reset(c.useplane.hook.first);
-													c.useplane.obj.SetFrameLocalMatrix(c.useplane.hook.first,
-														(
-															MATRIX_ref(MGetRotVec2(vec1.get(), vec2.get()))
-															)
-														*c.useplane.hook.second.Mtrans()
-													);
 
-													carrier.SetFrameLocalMatrix(wi.first,
-														(
-														(c.useplane.obj.frame(c.useplane.hook.first + 1) - carrier.frame(wi.first)).Mtrans()
-															*c.vehicle[1].mat.Inverse()
-															)
-														*wi.second.Mtrans()
-													);
-													break;
-												}
-											}
-										}
-										if (to && c.vehicle[1].speed > 0.f) {
-											c.vehicle[1].speed += -1.75f / 3.6f;
-										}
-									}
 									w.gndsmksize = std::clamp(c.vehicle[1].speed*3.6f / 50.f, 0.1f, 1.f);
-									if (c.vehicle[1].speed >= 0.f && c.key[11]) {
+									if (c.vehicle[1].speed >= 0.f && (c.key[11] && c.flight)) {
 										c.vehicle[1].speed += -1.0f / 3.6f;
 									}
 									if (c.vehicle[1].speed <= 0.f) {
-										c.vehicle[1].speed *= powf(0.9f, 60.f / fps);
+										easing_set(&c.vehicle[1].speed, 0.f, 0.9f, fps);
+									}
+
+									if (c.key[14]) {
+										easing_set(&c.vehicle[1].speed, c.useplane.mid_speed_limit, 0.90f, fps);
 									}
 								}
 							}
@@ -1270,13 +1010,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					}
 					else {
 						for (auto& w : c.useplane.wheelframe) {
-							w.gndsmksize *= powf(0.9f, 60.f / fps);
+							easing_set(&w.gndsmksize, 0.f, 0.9f, fps);
 						}
 					}
 					c.vehicle[1].pos += c.vehicle[1].add + VECTOR_ref(VGet(0.f, 0.f, -c.vehicle[1].speed / fps)).Vtrans(c.vehicle[1].mat);
 				}
 				//射撃
-				shoot(false,&c, c.vehicle[1].pos, VECTOR_ref(VGet(0.f, 0.f, -1.f)).Vtrans(c.vehicle[1].mat),fps);
+				shoot(&c, fps);
 				//壁の当たり判定
 				VECTOR_ref p_0 = c.vehicle[1].pos + VECTOR_ref(VGet(c.useplane.minpos.x(), 0.f, c.useplane.maxpos.z())).Vtrans(c.vehicle[1].mat);
 				VECTOR_ref p_1 = c.vehicle[1].pos + VECTOR_ref(VGet(c.useplane.maxpos.x(), 0.f, c.useplane.maxpos.z())).Vtrans(c.vehicle[1].mat);
@@ -1327,8 +1067,12 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				if (hitb) {
 					c.flight = false;
-					c.vehicle[1].pos = VGet(0.f, 5.f, 0.f);
-					c.vehicle[1].mat = MGetIdent();
+
+					carrier.SetFrameLocalMatrix(catapult[0].first + 2, RotX(deg2rad(-75))*catapult[0].second.Mtrans());
+					auto pp = carrier.frame(catapult[0].first + 1) - carrier.frame(catapult[0].first);
+					c.vehicle[1].pos = carrier.frame(catapult[0].first) + VGet(0.f, 3.f, 0.f) + pp.Norm().Scale(6.f);
+					c.vehicle[1].mat = RotY(atan2f(-pp.x(),-pp.z()));
+
 					c.vehicle[1].xradadd_right = 0.f;
 					c.vehicle[1].xradadd_left = 0.f;
 					c.vehicle[1].yradadd_left = 0.f;
@@ -1339,6 +1083,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 					c.vehicle[1].speed_sub = 0.f;
 					c.vehicle[1].speed = 0.f;// c.useplane.min_speed_limit;
 					c.vehicle[1].add = VGet(0.f, 0.f, 0.f);
+					c.landing = false;
 				}
 			}
 			/*effect*/
@@ -1355,7 +1100,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				}
 				for (auto& t : c.usetank.wheelframe) {
 					t.gndsmksize = 0.1f + std::abs(c.vehicle[0].speed) / ((c.usetank.flont_speed_limit / 3.6f) / fps)*0.6f;
-					t.gndsmkeffcs.handle.SetPos(c.usetank.obj.frame(t.frame.first) + c.yvec.Scale(-t.frame.second.y()));
+					t.gndsmkeffcs.handle.SetPos(c.usetank.obj.frame(t.frame.first) + VECTOR_ref(VGet(0.f, -t.frame.second.y(), 0.f)).Vtrans(c.vehicle[0].mat));
 					t.gndsmkeffcs.handle.SetScale(t.gndsmksize);
 				}
 				for (auto& t : c.useplane.wheelframe) {
@@ -1378,53 +1123,45 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			c.vehicle[0].yrad = -c.mine.body->GetAngle();
 			c.vehicle[0].pos.x(c.mine.body->GetPosition().x);
 			c.vehicle[0].pos.z(c.mine.body->GetPosition().y);
-			c.vehicle[0].mat = Axis1(c.zvec* c.yvec, c.yvec, c.zvec);
 			float spdrec = c.spd;
-			c.spd += (std::hypot(c.mine.body->GetLinearVelocity().x, c.mine.body->GetLinearVelocity().y) * ((c.spd > 0) ? 1.f : -1.f) - c.spd)* (1.f - powf(0.99f, 60.f / fps));
+			easing_set(&c.spd, std::hypot(c.mine.body->GetLinearVelocity().x, c.mine.body->GetLinearVelocity().y) * ((c.spd > 0) ? 1.f : -1.f), 0.99f, fps);
 			c.vehicle[0].speed = c.spd - spdrec;
-		}
-		//モデルに反映
-		for (auto& c : chara) {
-			c.usetank.obj.SetPosition(c.vehicle[0].pos);
-			c.usetank.obj.SetRotationZYAxis(c.zvec, c.yvec, 0.f);
-			c.useplane.obj.SetMatrix(c.vehicle[1].mat*c.vehicle[1].pos.Mtrans());
-			for (auto& be : c.p_burner) {
-				be.effectobj.SetMatrix(MATRIX_ref(MGetScale(VGet(1.f, 1.f, std::clamp(c.vehicle[1].speed / c.useplane.mid_speed_limit, 0.1f, 1.f))))*be.frame.second.Mtrans()  * c.vehicle[1].mat *c.vehicle[1].pos.Mtrans());
-			}
 		}
 		//弾判定,弾痕
 		for (auto& c : chara) {
 			//弾判定
 			for (auto& gns : c.vehicle) {
 				for (auto& g : gns.Gun_) {
-					for (auto& a : g.Ammo) {
-						if (a.flug) {
-							a.repos = a.pos;
-							a.pos += a.vec.Scale(a.spec.speed / fps);
-							a.pos.yadd(a.yadd);
-							ref_col(c.id, a.pos, a.repos, a.spec.speed / fps);
-							//判定
-							{
-								bool ground_hit = false;
-								VECTOR_ref normal;
+					for (auto& a : g.bullet) {
+						float size = 3.f;
+						for (int z = 0; z < int(size); z++) {
+							if (a.flug) {
+								a.repos = a.pos;
+								a.pos += a.vec.Scale(a.spec.speed / fps / size);
+								a.pos.yadd(a.yadd / size);
+								ref_col(c.id, a.pos, a.repos, 5.f);
+								//判定
 								{
-									auto hps = carrier_col.CollCheck_Line(a.repos, a.pos);
-									if (hps.HitFlag) {
-										a.pos = hps.HitPosition;
-										normal = hps.Normal;
-										ground_hit = true;
-									}
-								}
-								for (int i = 0; i < map_col.mesh_num(); i++) {
-									auto hps = map_col.CollCheck_Line(a.repos, a.pos, 0, i);
-									if (hps.HitFlag) {
-										a.pos = hps.HitPosition;
-										normal = hps.Normal;
-										ground_hit = true;
-									}
-								}
-								if (a.spec.type == 0) {//AP
+									bool ground_hit = false;
+									VECTOR_ref normal;
+									//戦車以外に当たる
 									{
+										{
+											auto hps = carrier_col.CollCheck_Line(a.repos, a.pos);
+											if (hps.HitFlag) {
+												a.pos = hps.HitPosition;
+												normal = hps.Normal;
+												ground_hit = true;
+											}
+										}
+										for (int i = 0; i < map_col.mesh_num(); i++) {
+											auto hps = map_col.CollCheck_Line(a.repos, a.pos, 0, i);
+											if (hps.HitFlag) {
+												a.pos = hps.HitPosition;
+												normal = hps.Normal;
+												ground_hit = true;
+											}
+										}
 										for (auto& t : chara) {
 											if (t.vehicle[1].hit_check) {
 												auto hps = t.useplane.col.CollCheck_Line(a.repos, a.pos, -1, -1);
@@ -1440,7 +1177,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 											}
 										}
 									}
-									if (a.flug) {
+									//戦車に当たる
+									switch (a.spec.type) {
+									case 0://AP
 										if (!hit::get_reco(c, chara, a)) {
 											if (ground_hit) {
 												if (a.spec.caliber >= 0.020f) {
@@ -1456,32 +1195,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 													a.vec += normal.Scale((a.vec % normal) * -2.f);
 													a.vec = a.vec.Norm();
 													a.pos += a.vec.Scale(0.01f);
-													a.spec.penetration /= 2.0f;
+													a.spec.penetration /= 2.f;
 												}
 											}
 										}
-										a.spec.penetration -= 1.0f / fps;
-										a.spec.speed -= 5.f / fps;
-									}
-								}
-								if (a.spec.type == 1) {//HE
-									{
-										for (auto& t : chara) {
-											if (t.vehicle[1].hit_check) {
-												auto hps = t.useplane.col.CollCheck_Line(a.repos, a.pos, -1, -1);
-												if (hps.HitFlag) {
-													a.flug = false;
-													if (a.spec.caliber >= 0.020f) {
-														set_effect(&c.effcs[ef_reco], hps.HitPosition, hps.Normal);
-													}
-													else {
-														set_effect(&c.effcs[ef_reco2], hps.HitPosition, hps.Normal);
-													}
-												}
-											}
+										if (a.flug) {
+											a.spec.penetration -= 1.0f / fps / size;
+											a.spec.speed -= 5.f / fps / size;
 										}
-									}
-									if (a.flug) {
+										break;
+									case 1://HE
 										if (!hit::get_reco(c, chara, a)) {
 											if (ground_hit) {
 												if (a.spec.caliber >= 0.020f) {
@@ -1493,36 +1216,57 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 												a.flug = false;
 											}
 										}
-										a.spec.speed -= 5.f / fps;
+										if (a.flug) {
+											a.spec.speed -= 5.f / fps / size;
+										}
+										break;
+									default:
+										break;
 									}
 								}
-							}
-							a.yadd += -9.8f / powf(fps, 2.f);
-							a.cnt += 1.f / fps;
-							//消す(3秒たった、スピードが0以下、貫通が0以下)
-							if (a.cnt >= 3.f || a.spec.speed < 100.f || a.spec.penetration <= 0.f) {
-								a.flug = false;
+
+								//消す(3秒たった、スピードが0以下、貫通が0以下)
+								if (a.cnt >= 3.f || a.spec.speed < 100.f || a.spec.penetration <= 0.f) {
+									a.flug = false;
+								}
 							}
 						}
+						a.yadd += -9.8f / powf(fps, 2.f);
+						a.cnt += 1.f / fps;
 					}
 				}
 			}
 			//弾痕
 			for (auto& h : c.hit) {
 				if (h.flug) {
-					auto yvec = h.yvec.Vtrans(c.vehicle[0].mat);
-					auto zvec = h.zvec.Vtrans(c.vehicle[0].mat);
+					auto y_vec = h.y_vec.Vtrans(c.vehicle[0].mat);
+					auto z_vec = h.z_vec.Vtrans(c.vehicle[0].mat);
 
 					h.pic.SetScale(h.scale);
-					h.pic.SetRotationZYAxis(zvec, yvec, 0.f);
-					h.pic.SetPosition(c.vehicle[0].pos + h.pos.Vtrans(c.vehicle[0].mat) + yvec.Scale(0.005f));
+					h.pic.SetRotationZYAxis(z_vec, y_vec, 0.f);
+					h.pic.SetPosition(c.vehicle[0].pos + h.pos.Vtrans(c.vehicle[0].mat) + y_vec.Scale(0.005f));
 
-					//h.pic.SetMatrix(Axis1((yvec*zvec), yvec, zvec, (c.vehicle[0].pos + h.pos.Vtrans(c.vehicle[0].mat) + yvec.Scale(0.005f))) *MGetScale(h.scale.get()));
+					//h.pic.SetMatrix(Axis1((y_vec*z_vec), y_vec, z_vec, (c.vehicle[0].pos + h.pos.Vtrans(c.vehicle[0].mat) + y_vec.Scale(0.005f))) *MGetScale(h.scale.get()));
 				}
 			}
 		}
+		{
+			//他の座標をここで出力(ホスト)
+		}
+		{
+			//ホストからの座標をここで入力
+		}
+		//モデルに反映
+		for (auto& c : chara) {
+			c.usetank.obj.SetMatrix(c.vehicle[0].mat*c.vehicle[0].pos.Mtrans());
+			c.useplane.obj.SetMatrix(c.vehicle[1].mat*c.vehicle[1].pos.Mtrans());
+			for (auto& be : c.p_burner) {
+				be.effectobj.SetMatrix(MATRIX_ref(MGetScale(VGet(1.f, 1.f, std::clamp(c.vehicle[1].speed / c.useplane.mid_speed_limit, 0.1f, 1.f))))*be.frame.second.Mtrans()  * c.vehicle[1].mat *c.vehicle[1].pos.Mtrans());
+			}
+		}
 		//影用意
-		Drawparts->Ready_Shadow(campos, [&map, &chara, &ads] {
+		Drawparts->Ready_Shadow(campos, [&map, &chara, &carrier] {
+			carrier.DrawModel();
 			for (auto& c : chara) {
 				c.usetank.obj.DrawModel();
 				c.useplane.obj.DrawModel();
@@ -1532,7 +1276,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 			if (ads) {
 				campos = mine.usetank.obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame1.first) + mine.vehicle[0].Gun_[0].gun_info.frame2.second.Vtrans(RotY(eye_yrad));
 				camvec = campos - eyevec;
-				camup = mine.yvec;
+				camup = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(mine.vehicle[0].mat);
 			}
 			else {
 				if (!mine.flight) {
@@ -1557,182 +1301,108 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 						}					}
 					{
 						camup = VGet(0.f, 1.f, 0.f);
-						camup = camup.Vtrans((mine.zvec*mine.yvec).GetRotAxis(mine.xrad_shot));
-						camup = camup.Vtrans(mine.zvec.GetRotAxis(mine.zrad_shot));
-						camup = camup.Vtrans((mine.zvec*mine.yvec).GetRotAxis(mine.zrad_shot));
-						camup = camup.Vtrans(mine.zvec.GetRotAxis(mine.xrad_shot));
+						camup = camup.Vtrans(VECTOR_ref(VGet(1.f, 0.f, 0.f)).Vtrans(mine.vehicle[0].mat).GetRotAxis(mine.xrad_shot));
+						camup = camup.Vtrans(VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(mine.vehicle[0].mat).GetRotAxis(mine.zrad_shot));
+						camup = camup.Vtrans(VECTOR_ref(VGet(1.f, 0.f, 0.f)).Vtrans(mine.vehicle[0].mat).GetRotAxis(mine.zrad_shot));
+						camup = camup.Vtrans(VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(mine.vehicle[0].mat).GetRotAxis(mine.xrad_shot));
 					}
 				}
 				else {
 					camvec = mine.vehicle[1].pos + VECTOR_ref(VGet(0.f, 6.f, 0.f)).Vtrans(mine.vehicle[1].mat);
 					camvec.y(std::max(camvec.y(), 5.f));
 
-					//campos = camvec + eyevec.Scale(range);
-					//campos.y(std::max(campos.y(), 0.f));
+					if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
+						eyevec = (camvec - aimpos2).Norm();
+						campos = camvec + eyevec.Scale(range);
+						camup = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(mine.vehicle[1].mat);
 
-					campos = camvec + (aimpos2-camvec).Norm().Scale(-range);
-					//aimpos2
-					camup = VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(mine.vehicle[1].mat);
-
-					//camup = VGet(0.f, 1.f, 0.f);
+						eye_xrad = std::asinf(eyevec.y());
+						if (sin(eye_xrad) == 0.f) {
+							eye_yrad = std::asinf(eyevec.x() / sin(eye_xrad));
+						}
+						else {
+							eye_yrad = std::acosf(eyevec.z() / cos(eye_xrad));
+						}
+					}
+					else {
+						campos = camvec + eyevec.Scale(range);
+						campos.y(std::max(campos.y(), 0.f));
+						for (int i = 0; i < map_col.mesh_num(); i++) {
+							auto hp = map_col.CollCheck_Line(camvec, campos, 0, i);
+							if (hp.HitFlag == TRUE) {
+								campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec).Scale(0.9f);
+							}
+						}
+						{
+							auto hp = carrier_col.CollCheck_Line(camvec, campos);
+							if (hp.HitFlag == TRUE) {
+								campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec).Scale(0.9f);
+							}
+						}
+						camup = VGet(0.f, 1.f, 0.f);
+					}
 				}
 			}
 		}
 		float dist = std::clamp((campos - aimingpos).size(), 300.f, 1000.f);
-		//描画
-		Drawparts->SetDraw_Screen(SkyScreen);
-		{
-			//カメラ
-			SetCameraNearFar(1000.0f, 5000.0f);
-			SetupCamera_Perspective(deg2rad(45) / ratio);
-			SetCameraPositionAndTargetAndUpVec((campos - camvec).get(), VGet(0, 0, 0), camup.get());
-			SetFogEnable(FALSE);
-			SetUseLighting(FALSE);
-			sky.DrawModel();
-			SetUseLighting(TRUE);
-			SetFogEnable(TRUE);
-		}
-		Drawparts->SetDraw_Screen(FarScreen);
-		SetCameraNearFar(dist, 6000.0f);
-		{
-			//カメラ
-			SetupCamera_Perspective(deg2rad(45) / ratio);
-			SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
-			{
-				SkyScreen.DrawGraph(0, 0, FALSE);
+		//被写体深度描画
+		Hostpassparts->dof(
+			&BufScreen,
+			[&sky] {
+				SetFogEnable(FALSE);
+				SetUseLighting(FALSE);
+				sky.DrawModel();
+				SetUseLighting(TRUE);
+				SetFogEnable(TRUE);
+			},
+			[&Drawparts, &map, &carrier, &chara, &ads, &Vertex, &draw_bullets] {
 				Drawparts->Draw_by_Shadow([&map, &carrier, &chara, &ads, &Vertex] {
-					SetFogStartEnd(0.0f, 1000.f);
+					SetFogStartEnd(0.0f, 3000.f);
 					SetFogColor(128, 192, 255);
 					{
 						DrawPolygon3D(Vertex, 2, DX_NONE_GRAPH, TRUE);
 					}
-					SetFogStartEnd(0.0f, 2000.f);
+					SetFogStartEnd(0.0f, 3000.f);
 					SetFogColor(128, 128, 128);
 					{
 						map.DrawModel();
 						carrier.DrawModel();
+						//戦車
 						for (auto& t : chara) {
 							if ((!ads && t.id == 0) || t.id != 0) {
 								t.usetank.obj.DrawModel();
 							}
-							//弾痕
 							for (auto& h : t.hit) {
 								if (h.flug) {
-									h.pic.DrawFrame(h.use);
+									h.pic.DrawFrame(h.use);//弾痕
 								}
 							}
 						}
+						//戦闘機
 						for (auto& t : chara) {
 							t.useplane.obj.DrawModel();
-						}
-						for (auto& t : chara) {
 							for (auto& be : t.p_burner) {
-								be.effectobj.DrawModel();
+								be.effectobj.DrawModel();//バーナー
 							}
 						}
 					}
 				});
 				draw_bullets(Drawparts->GetColor(255, 255, 255));
-			}
-		}
-		Drawparts->SetDraw_Screen(MainScreen);
-		SetCameraNearFar( (mine.flight) ? (10.f) : ((ads) ? ((3.f + 197.f*(dist - 300.f) / (1000.f - 300.f))) : 3.f) , dist + 50.0f);
-		{
-			//カメラ
-			SetupCamera_Perspective(deg2rad(45) / ratio);
-			SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
-			{
-				Effekseer_Sync3DSetting();
-				GraphFilter(FarScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 200);
-				FarScreen.DrawGraph(0, 0, false);
-				UpdateEffekseer3D(); //2.0ms
-
-				Drawparts->Draw_by_Shadow([&map, &carrier, &chara, &ads, &Vertex] {
-					SetFogStartEnd(0.0f, 1000.f);
-					SetFogColor(128, 192, 255);
-					{
-						DrawPolygon3D(Vertex, 2, DX_NONE_GRAPH, TRUE);
-					}
-					SetFogStartEnd(0.0f, 2000.f);
-					SetFogColor(128, 128, 128);
-					{
-						map.DrawModel();
-						carrier.DrawModel();
-						for (auto& t : chara) {
-							if ((!ads && t.id == 0) || t.id != 0) {
-								t.usetank.obj.DrawModel();
-							}
-							//弾痕
-							for (auto& h : t.hit) {
-								if (h.flug) {
-									h.pic.DrawFrame(h.use);
-								}
-							}
-						}
-						for (auto& t : chara) {
-							t.useplane.obj.DrawModel();
-						}
-						for (auto& t : chara) {
-							for (auto& be : t.p_burner) {
-								be.effectobj.DrawModel();
-							}
-						}
-					}
-				});
-				DrawEffekseer3D();
-				draw_bullets(Drawparts->GetColor(255, 255, 255));
-			}
-		}
-		Drawparts->SetDraw_Screen(NearScreen);
-		SetCameraNearFar(0.01f, (mine.flight) ? (10.5f) : ((ads) ? ((3.f + 197.f*(dist - 300.f) / (1000.f - 300.f)) + 0.5f) : 3.5f));
-		{
-			//カメラ
-			SetupCamera_Perspective(deg2rad(45) / ratio);
-			SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
-			{
-				Drawparts->Draw_by_Shadow([&map, &carrier, &chara, &ads, &Vertex] {
-					DrawPolygon3D(Vertex, 2, DX_NONE_GRAPH, TRUE);
-					map.DrawModel();
-					carrier.DrawModel();
-					for (auto& t : chara) {
-						if ((!ads && t.id == 0) || t.id != 0) {
-							t.usetank.obj.DrawModel();
-						}
-						//弾痕
-						for (auto& h : t.hit) {
-							if (h.flug) {
-								h.pic.DrawFrame(h.use);
-							}
-						}
-					}
-					for (auto& t : chara) {
-						t.useplane.obj.DrawModel();
-					}
-					for (auto& t : chara) {
-						for (auto& be : t.p_burner) {
-							be.effectobj.DrawModel();
-						}
-					}
-				});
-				draw_bullets(Drawparts->GetColor(255, 255, 255));
-			}
-		}
-		Drawparts->SetDraw_Screen(BufScreen);
-		{
-			MainScreen.DrawGraph(0, 0, false);
-			NearScreen.DrawGraph(0, 0, true);
-		}
+			},
+			campos, camvec, camup, deg2rad(90 / 2) / ratio,
+			dist,
+			mine.flight ? 10.f : (ads ? (1.5f + 198.5f*(dist - 300.f) / (1000.f - 300.f)) : 1.5f)
+		);
+		//
 		Drawparts->SetDraw_Screen(DX_SCREEN_BACK);
+		//照準座標取得
 		{
-			SetCameraNearFar(0.01f, 3000.0f);
+			SetCameraNearFar(0.01f, 5000.0f);
 			SetupCamera_Perspective(deg2rad(45) / ratio);
 			SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
-		}
-		//照準座標取得
-		if(mine.flight){
-			VECTOR_ref startpos = mine.vehicle[1].pos;
-			VECTOR_ref tmppos = startpos + VECTOR_ref(VGet(0.f, 0.f, -1000.f)).Vtrans(mine.vehicle[1].mat);
-			{
+			if (mine.flight) {
+				VECTOR_ref startpos = mine.vehicle[1].pos;
+				VECTOR_ref tmppos = startpos + VECTOR_ref(VGet(0.f, 0.f, -1000.f)).Vtrans(mine.vehicle[1].mat);
 				for (int i = 0; i < map_col.mesh_num(); i++) {
 					auto hp = map_col.CollCheck_Line(startpos, tmppos, 0, i);
 					if (hp.HitFlag == TRUE) {
@@ -1743,115 +1413,71 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 				if (hp.HitFlag == TRUE) {
 					tmppos = hp.HitPosition;
 				}
+				easing_set(&aimpos2, tmppos, 0.9f, fps);
+				aimposout = ConvWorldPosToScreenPos(aimpos2.get());
 			}
-			ref_col(mine.id, startpos, tmppos, 5.f);
-			for (auto& t : chara) {
-				if (t.vehicle[0].hit_check) {
-					for (int i = 0; i < t.usetank.col.mesh_num(); i++) {
-						const auto hp = t.usetank.col.CollCheck_Line(startpos, tmppos, -1, i);
+			else {
+				VECTOR_ref startpos = mine.usetank.obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame2.first);
+				VECTOR_ref tmppos = startpos + (mine.usetank.obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame3.first) - startpos).Norm().Scale(1000.f);
+				{
+					for (int i = 0; i < map_col.mesh_num(); i++) {
+						auto hp = map_col.CollCheck_Line(startpos, tmppos, 0, i);
+						if (hp.HitFlag == TRUE) {
+							tmppos = hp.HitPosition;
+						}
+					}
+					auto hp = carrier_col.CollCheck_Line(startpos, tmppos);
+					if (hp.HitFlag == TRUE) {
+						tmppos = hp.HitPosition;
+					}
+				}
+				ref_col(mine.id, startpos, tmppos, 5.f);
+				for (auto& t : chara) {
+					if (t.vehicle[0].hit_check) {
+						for (int i = 0; i < t.usetank.col.mesh_num(); i++) {
+							const auto hp = t.usetank.col.CollCheck_Line(startpos, tmppos, -1, i);
+							if (hp.HitFlag == TRUE) {
+								tmppos = hp.HitPosition;
+							}
+						}
+					}
+					if (t.vehicle[1].hit_check) {
+						const auto hp = t.useplane.col.CollCheck_Line(startpos, tmppos, -1, -1);
 						if (hp.HitFlag == TRUE) {
 							tmppos = hp.HitPosition;
 						}
 					}
 				}
-				if (t.vehicle[1].hit_check) {
-					const auto hp = t.useplane.col.CollCheck_Line(startpos, tmppos, -1, -1);
-					if (hp.HitFlag == TRUE) {
-						tmppos = hp.HitPosition;
-					}
-				}
+				easing_set(&aimpos, tmppos, 0.9f, fps);
+				aimposout = ConvWorldPosToScreenPos(aimpos.get());
 			}
-
-			aimpos2 += (tmppos - aimpos2).Scale(1.f - powf(0.9f, 60.f / fps));
-			aimposout = ConvWorldPosToScreenPos(aimpos2.get());
-		}
-		else{
-			VECTOR_ref startpos = mine.usetank.obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame2.first);
-			VECTOR_ref tmppos = startpos + (mine.usetank.obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame3.first) - startpos).Norm().Scale(1000.f);
 			{
-				for (int i = 0; i < map_col.mesh_num(); i++) {
-					auto hp = map_col.CollCheck_Line(startpos, tmppos, 0, i);
-					if (hp.HitFlag == TRUE) {
-						tmppos = hp.HitPosition;
-					}
-				}
-				auto hp = carrier_col.CollCheck_Line(startpos, tmppos);
-				if (hp.HitFlag == TRUE) {
-					tmppos = hp.HitPosition;
-				}
-			}
-			ref_col(mine.id, startpos, tmppos, 5.f);
-			for (auto& t : chara) {
-				if (t.vehicle[0].hit_check) {
-					for (int i = 0; i < t.usetank.col.mesh_num(); i++) {
-						const auto hp = t.usetank.col.CollCheck_Line(startpos, tmppos, -1, i);
-						if (hp.HitFlag == TRUE) {
-							tmppos = hp.HitPosition;
-						}
-					}
-				}
-				if (t.vehicle[1].hit_check) {
-					const auto hp = t.useplane.col.CollCheck_Line(startpos, tmppos, -1, -1);
-					if (hp.HitFlag == TRUE) {
-						tmppos = hp.HitPosition;
-					}
-				}
-			}
-
-			aimpos += (tmppos - aimpos).Scale(1.f - powf(0.9f, 60.f / fps));
-			aimposout = ConvWorldPosToScreenPos(aimpos.get());
-		}
-		//照準座標取得
-		{
-			aimingpos = campos + (camvec- campos).Norm().Scale(1000.f);
-			{
-				for (int i = 0; i < map_col.mesh_num(); i++) {
-					auto hp = map_col.CollCheck_Line(campos, aimingpos, 0, i);
-					if (hp.HitFlag == TRUE) {
-						aimingpos = hp.HitPosition;
-					}
-				}
-				auto hp = carrier_col.CollCheck_Line(campos, aimingpos);
-				if (hp.HitFlag == TRUE) {
-					aimingpos = hp.HitPosition;
-				}
-			}
-			ref_col(mine.id, campos, aimingpos, 5.f);
-			for (auto& t : chara) {
-				if (t.vehicle[0].hit_check) {
-					for (int i = 0; i < t.usetank.col.mesh_num(); i++) {
-						const auto hp = t.usetank.col.CollCheck_Line(campos, aimingpos, -1, i);
+				aimingpos = campos + (camvec - campos).Norm().Scale(1000.f);
+				{
+					for (int i = 0; i < map_col.mesh_num(); i++) {
+						auto hp = map_col.CollCheck_Line(campos, aimingpos, 0, i);
 						if (hp.HitFlag == TRUE) {
 							aimingpos = hp.HitPosition;
 						}
 					}
-				}
-				if (t.vehicle[0].hit_check) {
-					const auto hp = t.useplane.col.CollCheck_Line(campos, aimingpos, -1, -1);
+					auto hp = carrier_col.CollCheck_Line(campos, aimingpos);
 					if (hp.HitFlag == TRUE) {
 						aimingpos = hp.HitPosition;
 					}
 				}
 			}
 		}
-		//UI
+		//描画
 		{
+			//背景
 			BufScreen.DrawGraph(0, 0, false);
 			//ブルーム
-			{
-				GraphFilterBlt(BufScreen.get(), HighBrightScreen.get(), DX_GRAPH_FILTER_TWO_COLOR, 245, GetColor(0, 0, 0), 255, GetColor(128, 128, 128), 255);
-				GraphFilterBlt(HighBrightScreen.get(), GaussScreen.get(), DX_GRAPH_FILTER_DOWN_SCALE, EXTEND);
-				GraphFilter(GaussScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 1000);
-				SetDrawMode(DX_DRAWMODE_BILINEAR);
-				SetDrawBlendMode(DX_BLENDMODE_ADD, 64);
-				GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
-				GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
-				SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+			Hostpassparts->bloom(BufScreen, (mine.flight) ? 255 : 64);
+			/*
+			for (auto& l : wall) {
+				DrawLine3D(VGet(l.vehicle[0].pos.x(), 2.f, l.vehicle[0].pos.z()), VGet(l.pos[1].x(), 2.f, l.pos[1].z()), Drawparts->GetColor(255, 0, 0));
 			}
-
-			//for (auto& l : wall) {
-			//	DrawLine3D(VGet(l.vehicle[0].pos.x(), 2.f, l.vehicle[0].pos.z()), VGet(l.pos[1].x(), 2.f, l.pos[1].z()), Drawparts->GetColor(255, 0, 0));
-			//}
+			*/
 			UIparts->draw(aimposout, mine, ads);
 			Debugparts->end_way();
 			Debugparts->debug(10, 10, fps, float(GetNowHiPerformanceCount() - waits) / 1000.f);

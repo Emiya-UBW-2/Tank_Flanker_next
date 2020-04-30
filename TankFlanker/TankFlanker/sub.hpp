@@ -40,15 +40,8 @@ namespace std {
 //要改善
 class hit{
 public:
-	struct ammo {
-		std::string name;
-		int16_t type;
-		float caliber;
-		float penetration;
-		float speed;
-	};
-
 	typedef std::pair<int, VECTOR_ref> frames;
+	//共通
 	struct gun {
 		int type;
 		frames frame1;
@@ -64,24 +57,87 @@ public:
 		EffectS gndsmkeffcs;
 		float gndsmksize;
 	};
-	class Tanks {
+
+	//弾薬
+	class Ammos {
 	public:
 		std::string name;
-		bool isfloat;
-		float down_in_water;
+		int16_t type;
+		float caliber;
+		float penetration;
+		float speed;
+	};
+	static void set_ammos(std::vector<hit::Ammos>* Ammos) {
+		auto& a = *Ammos;
+		a.resize(a.size() + 1);
+		a.back().name = "M728 APDS";
+		a.back().type = 0;//ap=0,he=1
+		a.back().caliber = 0.105f;
+		a.back().penetration = 268.f;
+		a.back().speed = 1426.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "M393 HESH";
+		a.back().type = 1;//ap=0,he=1
+		a.back().caliber = 0.105f;
+		a.back().penetration = 145.f;
+		a.back().speed = 730.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "NATO 7.62";
+		a.back().type = 1;//ap=0,he=1
+		a.back().caliber = 0.00762f;
+		a.back().penetration = 12.f;
+		a.back().speed = 600.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "BR-412D APCBC";
+		a.back().type = 0;//ap=0,he=1
+		a.back().caliber = 0.100f;
+		a.back().penetration = 175.f;
+		a.back().speed = 887.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "USSR 12.7";
+		a.back().type = 1;//ap=0,he=1
+		a.back().caliber = 0.0127f;
+		a.back().penetration = 24.f;
+		a.back().speed = 850.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "vulcan 20";
+		a.back().type = 1;//ap=0,he=1
+		a.back().caliber = 0.020f;
+		a.back().penetration = 30.f;
+		a.back().speed = 800.f;
+
+		a.resize(a.size() + 1);
+		a.back().name = "M344A1 HEAT";
+		a.back().type = 1;//ap=0,he=1
+		a.back().caliber = 0.106f;
+		a.back().penetration = 400.f;
+		a.back().speed = 503.f;
+	}
+	//戦車
+	class Tanks {
+	public:
 		MV1 obj;
+		MV1 col;
+		std::string name;
+		float body_rad_limit;/*旋回速度(度/秒)*/
+		VECTOR_ref minpos, maxpos;
 		std::vector<gun> gunframe;
 		std::vector<foot> wheelframe;
-		MV1 col;
-		std::array<int, 4> square;
-		float flont_speed_limit;/*前進速度(km/h)*/
-		float back_speed_limit;/*後退速度(km/h)*/
-		float body_rad_limit;/*車体駆動速度(度/秒)*/
-		float turret_rad_limit;/*砲塔駆動速度(度/秒)*/
-		std::vector<std::pair<size_t, float>> armer_mesh;	  /*装甲ID*/	/**/
-		std::vector<size_t> space_mesh;	  /*装甲ID*/	/**/
-		std::vector<size_t> module_mesh;	  /*装甲ID*/	/**/
-		VECTOR_ref minpos, maxpos;
+	public:
+		bool isfloat;						/*浮くかどうか*/
+		float down_in_water;					/*沈む判定箇所*/
+		std::array<int, 4> square;				/*脚*/
+		float flont_speed_limit;				/*前進速度(km/h)*/
+		float back_speed_limit;					/*後退速度(km/h)*/
+		float turret_rad_limit;					/*砲塔駆動速度(度/秒)*/
+		std::vector<std::pair<size_t, float>> armer_mesh;	/*装甲ID*/
+		std::vector<size_t> space_mesh;				/*装甲ID*/
+		std::vector<size_t> module_mesh;			/*装甲ID*/
 
 		void into(const Tanks& t) {
 			this->isfloat = t.isfloat;
@@ -109,18 +165,201 @@ public:
 			this->gunframe = t.gunframe;
 		}
 	};
+	static void set_tanks(std::vector<hit::Tanks>*tank) {
+		for (auto& t : *tank) {
+			MV1::Load("data/tank/" + t.name + "/model.mv1", &t.obj);
+			MV1::Load("data/tank/" + t.name + "/col.mv1", &t.col);
+			//
+			t.down_in_water = 0.f;
+			for (int i = 0; i < t.obj.mesh_num(); i++) {
+				auto p = t.obj.mesh_maxpos(i).y();
+				if (t.down_in_water < p) {
+					t.down_in_water = p;
+				}
+			}
+			t.obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
+			for (int i = 0; i < t.obj.frame_num(); i++) {
+				std::string p = t.obj.frame_name(i);
+				if (p.find("転輪", 0) != std::string::npos) {
+					t.wheelframe.resize(t.wheelframe.size() + 1);
+					t.wheelframe.back().frame.first = i;
+					t.wheelframe.back().frame.second = t.obj.frame(t.wheelframe.back().frame.first);
+				}
+				else if (p.find("旋回", 0) != std::string::npos) {
+					t.gunframe.resize(t.gunframe.size() + 1);
+					t.gunframe.back().frame1.first = i;
+					t.gunframe.back().frame1.second = t.obj.frame(t.gunframe.back().frame1.first);
+					auto p2 = t.obj.frame_parent(t.gunframe.back().frame1.first);
+					if (p2 >= 0) {
+						t.gunframe.back().frame1.second -= t.obj.frame(int(p2));//親がいる時引いとく
+					}
+					if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
+						if (t.obj.frame_name(t.gunframe.back().frame1.first + 1).find("仰角", 0) != std::string::npos) {
+							t.gunframe.back().frame2.first = t.gunframe.back().frame1.first + 1;
+							t.gunframe.back().frame2.second = t.obj.frame(t.gunframe.back().frame2.first) - t.obj.frame(t.gunframe.back().frame1.first);
+							if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
+								t.gunframe.back().frame3.first = t.gunframe.back().frame2.first + 1;
+								t.gunframe.back().frame3.second = t.obj.frame(t.gunframe.back().frame3.first) - t.obj.frame(t.gunframe.back().frame2.first);
+							}
+							else {
+								t.gunframe.back().frame3.first = -1;
+							}
+						}
+					}
+					else {
+						t.gunframe.back().frame2.first = -1;
+					}
+				}
+				else if (p.find("min", 0) != std::string::npos) {
+					t.minpos = t.obj.frame(i);
+				}
+				else if (p.find("max", 0) != std::string::npos) {
+					t.maxpos = t.obj.frame(i);
+				}
+			}
+			//2	左後部0
+			{
+				float tmp = 0.f;
+				for (auto& f : t.wheelframe) {
+					if (f.frame.second.x() >= 0) {
+						t.square[0] = f.frame.first;
+						tmp = f.frame.second.z();
+						break;
+					}
+				}
+				for (auto& f : t.wheelframe) {
+					if (t.square[0] != f.frame.first) {
+						if (f.frame.second.x() >= 0) {
+							if (tmp < f.frame.second.z()) {
+								t.square[0] = f.frame.first;
+								tmp = f.frame.second.z();
+							}
+						}
+					}
+				}
+			}
+			//10	左前部1
+			{
+				float tmp = 0.f;
+				for (auto& f : t.wheelframe) {
+					if (f.frame.second.x() >= 0) {
+						t.square[1] = f.frame.first;
+						tmp = f.frame.second.z();
+						break;
+					}
+				}
+				for (auto& f : t.wheelframe) {
+					if (t.square[1] != f.frame.first) {
+						if (f.frame.second.x() >= 0) {
+							if (tmp > f.frame.second.z()) {
+								t.square[1] = f.frame.first;
+								tmp = f.frame.second.z();
+							}
+						}
+					}
+				}
+			}
+			//3	右後部2
+			{
+				float tmp = 0.f;
+				for (auto& f : t.wheelframe) {
+					if (!(f.frame.second.x() >= 0)) {
+						t.square[2] = f.frame.first;
+						tmp = f.frame.second.z();
+						break;
+					}
+				}
+				for (auto& f : t.wheelframe) {
+					if (t.square[2] != f.frame.first) {
+						if (!(f.frame.second.x() >= 0)) {
+							if (tmp < f.frame.second.z()) {
+								t.square[2] = f.frame.first;
+								tmp = f.frame.second.z();
+							}
+						}
+					}
+				}
+			}
+			//11	右前部3
+			{
+				float tmp = 0.f;
+				for (auto& f : t.wheelframe) {
+					if (!(f.frame.second.x() >= 0)) {
+						t.square[3] = f.frame.first;
+						tmp = f.frame.second.z();
+						break;
+					}
+				}
+				for (auto& f : t.wheelframe) {
+					if (t.square[3] != f.frame.first) {
+						if (!(f.frame.second.x() >= 0)) {
+							if (tmp > f.frame.second.z()) {
+								t.square[3] = f.frame.first;
+								tmp = f.frame.second.z();
+							}
+						}
+					}
+				}
+			}
+			//
+			for (int i = 0; i < t.col.mesh_num(); i++) {
+				std::string p = t.col.material_name(i);
+				if (p.find("armer", 0) != std::string::npos) {//装甲
+					t.armer_mesh.resize(t.armer_mesh.size() + 1);
+					t.armer_mesh.back().first = i;
+					t.armer_mesh.back().second = std::stof(getright(p.c_str()));//装甲値
+				}
+				else if (p.find("space", 0) != std::string::npos) {//空間装甲
+					t.space_mesh.resize(t.space_mesh.size() + 1);
+					t.space_mesh.back() = i;
+				}
+				else {//モジュール
+					t.module_mesh.resize(t.module_mesh.size() + 1);
+					t.module_mesh.back() = i;
+				}
+			}
+
+			{
+				int mdata = FileRead_open(("data/tank/" + t.name + "/data.txt").c_str(), FALSE);
+				char mstr[64]; /*tank*/
+				FileRead_gets(mstr, 64, mdata);
+				t.isfloat = (getright(mstr).find("true") != std::string::npos);
+				t.flont_speed_limit = getparam_f(mdata);
+				t.back_speed_limit = getparam_f(mdata);
+				t.body_rad_limit = getparam_f(mdata);
+				t.turret_rad_limit = getparam_f(mdata);
+
+				FileRead_gets(mstr, 64, mdata);
+				for (auto& g : t.gunframe) {
+					g.name = getright(mstr);
+					g.load_time = getparam_f(mdata);
+					while (true) {
+						FileRead_gets(mstr, 64, mdata);
+						if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
+							break;
+						}
+						g.useammo.resize(g.useammo.size() + 1);
+						g.useammo.back() = getright(mstr);
+					}
+				}
+				FileRead_close(mdata);
+			}
+		}
+	}
+	//飛行機
 	class Planes {
 	public:
-		std::string name;
 		MV1 obj;
 		MV1 col;
+		std::string name;
+		float body_rad_limit;/*旋回速度(度/秒)*/
+		VECTOR_ref minpos, maxpos;
+		std::vector<gun> gunframe;
 		std::vector<foot> wheelframe;
+	public:
 		float max_speed_limit;/*最高速度(km/h)*/
 		float mid_speed_limit;/*巡行速度(km/h)*/
 		float min_speed_limit;/*失速速度(km/h)*/
-		float rad_limit;/*旋回速度(度/秒)*/
-		VECTOR_ref minpos, maxpos;
-		std::vector<gun> gunframe;
 		std::vector<frames> burner;
 		frames hook;
 
@@ -136,7 +375,7 @@ public:
 			this->max_speed_limit = t.max_speed_limit;
 			this->mid_speed_limit = t.mid_speed_limit;
 			this->min_speed_limit = t.min_speed_limit;
-			this->rad_limit = t.rad_limit;
+			this->body_rad_limit = t.body_rad_limit;
 			this->minpos = t.minpos;
 			this->maxpos = t.maxpos;
 			this->gunframe = t.gunframe;
@@ -144,12 +383,98 @@ public:
 			this->hook = t.hook;
 		}
 	};
+	static void set_planes(std::vector<hit::Planes>* plane) {
+		for (auto& t : *plane) {
+			//モデル
+			MV1::Load("data/plane/" + t.name + "/model.mv1", &t.obj);
+			MV1::Load("data/plane/" + t.name + "/col.mv1", &t.col);
+			//αテスト
+			t.obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
+			//最大最小を取得
+			for (int i = 0; i < t.obj.mesh_num(); i++) {
+				if (t.maxpos.x() < t.obj.mesh_maxpos(i).x()) { t.maxpos.x(t.obj.mesh_maxpos(i).x()); }
+				if (t.maxpos.z() < t.obj.mesh_maxpos(i).z()) { t.maxpos.z(t.obj.mesh_maxpos(i).z()); }
+				if (t.minpos.x() > t.obj.mesh_minpos(i).x()) { t.minpos.x(t.obj.mesh_minpos(i).x()); }
+				if (t.minpos.z() > t.obj.mesh_minpos(i).z()) { t.minpos.z(t.obj.mesh_minpos(i).z()); }
+			}
+			//フレーム
+			for (int i = 0; i < t.obj.frame_num(); i++) {
+				std::string p = t.obj.frame_name(i);
+				if (p.find("脚", 0) != std::string::npos) {
+					if (p.find("ハッチ", 0) == std::string::npos) {
+						t.wheelframe.resize(t.wheelframe.size() + 1);
+						t.wheelframe.back().frame.first = i;
+						t.wheelframe.back().frame.second = t.obj.frame(t.wheelframe.back().frame.first);
+					}
+				}
+				else if (p.find("旋回", 0) != std::string::npos) {
+					t.gunframe.resize(t.gunframe.size() + 1);
+					t.gunframe.back().frame1.first = i;
+					t.gunframe.back().frame1.second = t.obj.frame(t.gunframe.back().frame1.first);
+					auto p2 = t.obj.frame_parent(t.gunframe.back().frame1.first);
+					if (p2 >= 0) {
+						t.gunframe.back().frame1.second -= t.obj.frame(int(p2));//親がいる時引いとく
+					}
+					if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
+						if (t.obj.frame_name(t.gunframe.back().frame1.first + 1).find("仰角", 0) != std::string::npos) {
+							t.gunframe.back().frame2.first = t.gunframe.back().frame1.first + 1;
+							t.gunframe.back().frame2.second = t.obj.frame(t.gunframe.back().frame2.first) - t.obj.frame(t.gunframe.back().frame1.first);
+							if (t.obj.frame_child_num(t.gunframe.back().frame1.first) >= 0) {
+								t.gunframe.back().frame3.first = t.gunframe.back().frame2.first + 1;
+								t.gunframe.back().frame3.second = t.obj.frame(t.gunframe.back().frame3.first) - t.obj.frame(t.gunframe.back().frame2.first);
+							}
+							else {
+								t.gunframe.back().frame3.first = -1;
+							}
+						}
+					}
+					else {
+						t.gunframe.back().frame2.first = -1;
+					}
+				}
+				else if (p.find("バーナー", 0) != std::string::npos) {
+					t.burner.resize(t.burner.size() + 1);
+					t.burner.back().first = i;
+					t.burner.back().second = t.obj.frame(t.burner.back().first);
+				}
+				else if (p.find("フック", 0) != std::string::npos) {
+					t.hook.first = i;
+					t.hook.second = t.obj.frame(t.hook.first);
+				}
+			}
+			//データ取得
+			{
+				int mdata = FileRead_open(("data/plane/" + t.name + "/data.txt").c_str(), FALSE);
+				char mstr[64]; /*tank*/
+				t.max_speed_limit = getparam_f(mdata) / 3.6f;
+				t.mid_speed_limit = getparam_f(mdata) / 3.6f;
+				t.min_speed_limit = getparam_f(mdata) / 3.6f;
+				t.body_rad_limit = getparam_f(mdata);
+
+				FileRead_gets(mstr, 64, mdata);
+				for (auto& g : t.gunframe) {
+					g.name = getright(mstr);
+					g.load_time = getparam_f(mdata);
+					while (true) {
+						FileRead_gets(mstr, 64, mdata);
+						if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
+							break;
+						}
+						g.useammo.resize(g.useammo.size() + 1);
+						g.useammo.back() = getright(mstr);
+					}
+				}
+				FileRead_close(mdata);
+			}
+		}
+	}
+	//player
 	struct ammos {
 		bool hit{ false };
 		bool flug{ false };
 		float cnt = 0.f;
 		int color = 0;
-		ammo spec;
+		Ammos spec;
 		float yadd;
 		VECTOR_ref pos, repos, vec;
 	};
@@ -164,40 +489,41 @@ public:
 	typedef std::pair<int, float> animes;
 	struct Chara {
 		size_t id;
-
-		VECTOR_ref zvec;
-		VECTOR_ref yvec;
-		VECTOR_ref wheel_normal;
+		//
 		//エフェクト
 		std::array<EffectS, efs_user> effcs; /*effect*/
 		//操作関連
-		bool flight = false;//フライト(形態)フラグ
-		std::array<bool, 12> key;//キー
-		float view_xrad = 0.f,view_yrad = 0.f;//砲塔操作用ベクトル
+			bool flight = false;//フライト(形態)フラグ
+			std::array<bool, 15> key;//キー
+			float view_xrad = 0.f,view_yrad = 0.f;//砲塔操作用ベクトル
 		//====================================================
-		std::vector<int16_t> HP;			   /*ライフ*/
 		//戦車//==================================================
 			Tanks usetank;
-			float wheel_Left = 0.f,wheel_Right = 0.f;  //転輪回転
-			b2Pats mine;				   /*box2d*/
-			float spd;				   /*box2d*/
+			float wheel_Left = 0.f,wheel_Right = 0.f;    //転輪回転
+			b2Pats mine;				     /*box2d*/
+			float spd;				     /*box2d*/
 			struct Hit {
-				bool flug{ false };		   /*弾痕フラグ*/
-				int use{ 0 };			   /*使用フレーム*/
-				MV1 pic;			   /*弾痕モデル*/
-				VECTOR_ref scale, pos, zvec, yvec; /*座標*/
+				bool flug{ false };		     /*弾痕フラグ*/
+				int use{ 0 };			     /*使用フレーム*/
+				MV1 pic;			     /*弾痕モデル*/
+				VECTOR_ref scale, pos, z_vec, y_vec; /*座標*/
 			};
-			int hitbuf;				   /*使用弾痕*/
-			std::array<Hit, 24> hit;		   /*弾痕*/
-			std::vector<MV1_COLL_RESULT_POLY> hitres;  /*確保*/
-			std::vector<pair> hitssort;		   /*フレームに当たった順番*/
-			float xradp_shot = 0.f, xrad_shot = 0.f;   //射撃反動x
-			float zradp_shot = 0.f, zrad_shot = 0.f;   //射撃反動z
+			int hitbuf;				     /*使用弾痕*/
+			std::array<Hit, 24> hit;		     /*弾痕*/
+			std::vector<MV1_COLL_RESULT_POLY> hitres;    /*確保*/
+			std::vector<int16_t> HP;		     /*ライフ*/
+			std::vector<pair> hitssort;		     /*フレームに当たった順番*/
+			float xradp_shot = 0.f, xrad_shot = 0.f;     //射撃反動x
+			float zradp_shot = 0.f, zrad_shot = 0.f;     //射撃反動z
+			VECTOR_ref wheel_normal;		     /*ノーマル*/
 		//飛行機//==================================================
 			Planes useplane;		      //
 			animes p_anime_geardown;	      //車輪アニメーション
 			uint8_t changegear_cnt = 0;	      //カウント
 			bool changegear = false;	      //スイッチ
+			float p_landing_per = 0.f;	      //着艦フック
+			uint8_t landing_cnt = 0;	      //カウント
+			bool landing = false;		      //スイッチ
 			std::array<animes, 6> p_animes_rudder;//ラダーアニメーション
 			struct burners{
 				frames frame;
@@ -212,13 +538,13 @@ public:
 			MATRIX_ref mat;			      //車体回転行列
 			VECTOR_ref add;			      //車体加速度
 			struct Guns {
-				std::array<ammos, 32> Ammo;   /*確保する弾*/
+				size_t usebullet{};	      /*使用弾*/
+				std::array<ammos, 64> bullet; /*確保する弾*/
 				float loadcnt{ 0 };	      /*装てんカウンター*/
-				float loadcnt_all{ 0 };	      /*装てんカウンター*/
-				size_t useammo{};	      /*使用弾*/
-				float fired{ 0.f };	      /*駐退*/
+				float loadcnt_all{ 0 };	      /*装てん秒数*/
+				float fired{ 0.f };	      /*駐退数*/
 				gun gun_info;		      /**/
-				std::vector<ammo> Spec;	      /**/
+				std::vector<Ammos> Spec;      /**/
 			};
 			std::vector<Guns> Gun_;
 			float speed = 0.f, speed_add = 0.f, speed_sub = 0.f;
@@ -230,302 +556,303 @@ public:
 	};
 	//
 	static bool get_reco(Chara& play, std::vector<Chara>& tgts, ammos& c) {
-		//
-		if (c.spec.type == 0) {
-			bool is_hit;
-			std::optional<size_t> hitnear;
-			for (auto& t : tgts) {
-				//自分自身は省く
-				if (play.id == t.id) {
-					continue;
-				}
-				//とりあえず当たったかどうか探す
-				is_hit = false;
-				//モジュール
-				for (auto& m : t.usetank.module_mesh) {
-					t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
-					if (t.hitres[m].HitFlag) {
-						t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
-						is_hit = true;
+		if (c.flug) {
+			if (c.spec.type == 0) {
+				bool is_hit;
+				std::optional<size_t> hitnear;
+				for (auto& t : tgts) {
+					//自分自身は省く
+					if (play.id == t.id) {
+						continue;
 					}
-					else {
-						t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
-					}
-				}
-				//空間装甲
-				for (auto& m : t.usetank.space_mesh) {
-					t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
-					if (t.hitres[m].HitFlag) {
-						t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
-						is_hit = true;
-					}
-					else {
-						t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
-					}
-				}
-				//装甲
-				for (auto& m : t.usetank.armer_mesh) {
-					t.hitres[m.first] = t.usetank.col.CollCheck_Line(c.repos, c.pos, -1, int(m.first));
-					if (t.hitres[m.first].HitFlag) {
-						t.hitssort[m.first] = pair(m.first, (c.repos - t.hitres[m.first].HitPosition).size());
-						is_hit = true;
-					}
-					else {
-						t.hitssort[m.first] = pair(m.first, (std::numeric_limits<float>::max)());
-					}
-				}
-				//当たってない
-				if (!is_hit) {
-					continue;
-				}
-				//当たり判定を近い順にソート
-				std::sort(t.hitssort.begin(), t.hitssort.end(), [](const pair& x, const pair& y) { return x.second < y.second; });
-				//判定
-				{
-					//ダメージ面に届くまで判定
-					for (auto& tt : t.hitssort) {
-						//装甲面に当たらなかったならスルー
-						if (tt.second == (std::numeric_limits<float>::max)()) {
-							break;
+					//とりあえず当たったかどうか探す
+					is_hit = false;
+					//モジュール
+					for (auto& m : t.usetank.module_mesh) {
+						t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
+						if (t.hitres[m].HitFlag) {
+							t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
+							is_hit = true;
 						}
-						//装甲面に当たったのでhitnearに代入して終了
-						for (auto& a : t.usetank.armer_mesh) {
-							if (tt.first == a.first) {
-								hitnear = tt.first;
-								//ダメージ面に当たった時に装甲値に勝てるかどうか
-								{
-									VECTOR_ref normal = t.hitres[hitnear.value()].Normal;
-									VECTOR_ref position = t.hitres[hitnear.value()].HitPosition;
-									if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
-										//貫通
-										//t.id;
-										t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
-										//撃破時エフェクト
-										if (t.HP[0] == 0) {
-											//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
-										}
-										//弾処理
-										c.flug = false;
-										c.vec += normal.Scale((c.vec % normal) * -2.0f);
-										c.vec = c.vec.Norm();
-										c.pos = c.vec.Scale(0.1f) + position;
-										//弾痕
-										t.hit[t.hitbuf].use = 0;
-									}
-									else {
-										//はじく
-										//弾処理
-										c.vec += normal.Scale((c.vec % normal) * -2.0f);
-										c.vec = c.vec.Norm();
-										c.pos = c.vec.Scale(0.1f) + position;
-										c.spec.penetration /= 2.0f;
-										//弾痕
-										t.hit[t.hitbuf].use = 1;
-									}
-									if (c.spec.caliber >= 0.020f) {
-										set_effect(&play.effcs[ef_reco], c.pos, normal);
-									}
-									else {
-										set_effect(&play.effcs[ef_reco2], c.pos, normal);
-									}
-
-									//弾痕のセット
-									{
-										float asize = c.spec.caliber * 100.f;
-										t.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm() % normal), asize, asize);
-										t.hit[t.hitbuf].pos = (position - t.vehicle[0].pos).Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].yvec = normal.Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].zvec = (normal * c.vec).Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].flug = true;
-										++t.hitbuf %= t.hit.size();
-									}
-								}
+						else {
+							t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
+						}
+					}
+					//空間装甲
+					for (auto& m : t.usetank.space_mesh) {
+						t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
+						if (t.hitres[m].HitFlag) {
+							t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
+							is_hit = true;
+						}
+						else {
+							t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
+						}
+					}
+					//装甲
+					for (auto& m : t.usetank.armer_mesh) {
+						t.hitres[m.first] = t.usetank.col.CollCheck_Line(c.repos, c.pos, -1, int(m.first));
+						if (t.hitres[m.first].HitFlag) {
+							t.hitssort[m.first] = pair(m.first, (c.repos - t.hitres[m.first].HitPosition).size());
+							is_hit = true;
+						}
+						else {
+							t.hitssort[m.first] = pair(m.first, (std::numeric_limits<float>::max)());
+						}
+					}
+					//当たってない
+					if (!is_hit) {
+						continue;
+					}
+					//当たり判定を近い順にソート
+					std::sort(t.hitssort.begin(), t.hitssort.end(), [](const pair& x, const pair& y) { return x.second < y.second; });
+					//判定
+					{
+						//ダメージ面に届くまで判定
+						for (auto& tt : t.hitssort) {
+							//装甲面に当たらなかったならスルー
+							if (tt.second == (std::numeric_limits<float>::max)()) {
 								break;
 							}
-						}
-						if (hitnear.has_value()) {
-							break;
-						}
-						//空間装甲、モジュールに当たったのでモジュールに30ダメ、貫徹力を1/2に
-						for (auto& a : t.usetank.space_mesh) {
-							if (tt.first == a) {
-								if (c.spec.caliber >= 0.020f) {
-									set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								else {
-									set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
-								c.spec.penetration /= 2.0f;
-							}
-						}
-						for (auto& a : t.usetank.module_mesh) {
-							if (tt.first == a) {
-								if (c.spec.caliber >= 0.020f) {
-									set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								else {
-									set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
-								c.spec.penetration /= 2.0f;
-							}
-						}
-					}
-				}
-				if (hitnear.has_value())
-					break;
-			}
-			return (hitnear.has_value());
-		}
-		if (c.spec.type == 1) {
-			bool is_hit;
-			std::optional<size_t> hitnear;
-			for (auto& t : tgts) {
-				//自分自身は省く
-				if (play.id == t.id) {
-					continue;
-				}
-				//とりあえず当たったかどうか探す
-				is_hit = false;
-				//モジュール
-				for (auto& m : t.usetank.module_mesh) {
-					t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
-					if (t.hitres[m].HitFlag) {
-						t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
-						is_hit = true;
-					}
-					else {
-						t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
-					}
-				}
-				//空間装甲
-				for (auto& m : t.usetank.space_mesh) {
-					t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
-					if (t.hitres[m].HitFlag) {
-						t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
-						is_hit = true;
-					}
-					else {
-						t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
-					}
-				}
-				//装甲
-				for (auto& m : t.usetank.armer_mesh) {
-					t.hitres[m.first] = t.usetank.col.CollCheck_Line(c.repos, c.pos, -1, int(m.first));
-					if (t.hitres[m.first].HitFlag) {
-						t.hitssort[m.first] = pair(m.first, (c.repos - t.hitres[m.first].HitPosition).size());
-						is_hit = true;
-					}
-					else {
-						t.hitssort[m.first] = pair(m.first, (std::numeric_limits<float>::max)());
-					}
-				}
-				//当たってない
-				if (!is_hit) {
-					continue;
-				}
-				//当たり判定を近い順にソート
-				std::sort(t.hitssort.begin(), t.hitssort.end(), [](const pair& x, const pair& y) { return x.second < y.second; });
-				//判定
-				{
-					//ダメージ面に届くまで判定
-					for (auto& tt : t.hitssort) {
-						//装甲面に当たらなかったならスルー
-						if (tt.second == (std::numeric_limits<float>::max)()) {
-							break;
-						}
-						//装甲面に当たったのでhitnearに代入して終了
-						for (auto& a : t.usetank.armer_mesh) {
-							if (tt.first == a.first) {
-								hitnear = tt.first;
-								//ダメージ面に当たった時に装甲値に勝てるかどうか
-								{
-									VECTOR_ref normal = t.hitres[hitnear.value()].Normal;
-									VECTOR_ref position = t.hitres[hitnear.value()].HitPosition;
-									if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
-										//貫通
-										//t.id;
-										t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
-										//撃破時エフェクト
-										if (t.HP[0] == 0) {
-											//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
-										}
-										//弾処理
-										c.flug = false;
-										c.vec += normal.Scale((c.vec % normal) * -2.0f);
-										c.vec = c.vec.Norm();
-										c.pos = c.vec.Scale(0.1f) + position;
-										//弾痕
-										t.hit[t.hitbuf].use = 0;
-									}
-									else {
-										//爆発する
-										//弾処理
-										c.flug = false;
-										c.vec += normal.Scale((c.vec % normal) * -2.0f);
-										c.vec = c.vec.Norm();
-										c.pos = c.vec.Scale(0.1f) + position;
-										//弾痕
-										t.hit[t.hitbuf].use = 1;
-									}
-									if (c.spec.caliber >= 0.020f) {
-										set_effect(&play.effcs[ef_reco], c.pos, normal);
-									}
-									else {
-										set_effect(&play.effcs[ef_reco2], c.pos, normal);
-									}
-
-									//弾痕のセット
+							//装甲面に当たったのでhitnearに代入して終了
+							for (auto& a : t.usetank.armer_mesh) {
+								if (tt.first == a.first) {
+									hitnear = tt.first;
+									//ダメージ面に当たった時に装甲値に勝てるかどうか
 									{
-										float asize = c.spec.caliber * 100.f;
-										t.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm() % normal), asize, asize);
-										t.hit[t.hitbuf].pos = (position - t.vehicle[0].pos).Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].yvec = normal.Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].zvec = (normal * c.vec).Vtrans(t.vehicle[0].mat.Inverse());
-										t.hit[t.hitbuf].flug = true;
-										++t.hitbuf %= t.hit.size();
+										VECTOR_ref normal = t.hitres[hitnear.value()].Normal;
+										VECTOR_ref position = t.hitres[hitnear.value()].HitPosition;
+										if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
+											//貫通
+											//t.id;
+											t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
+											//撃破時エフェクト
+											if (t.HP[0] == 0) {
+												//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
+											}
+											//弾処理
+											c.flug = false;
+											c.vec += normal.Scale((c.vec % normal) * -2.0f);
+											c.vec = c.vec.Norm();
+											c.pos = c.vec.Scale(0.1f) + position;
+											//弾痕
+											t.hit[t.hitbuf].use = 0;
+										}
+										else {
+											//はじく
+											//弾処理
+											c.vec += normal.Scale((c.vec % normal) * -2.0f);
+											c.vec = c.vec.Norm();
+											c.pos = c.vec.Scale(0.1f) + position;
+											c.spec.penetration /= 2.0f;
+											//弾痕
+											t.hit[t.hitbuf].use = 1;
+										}
+										if (c.spec.caliber >= 0.020f) {
+											set_effect(&play.effcs[ef_reco], c.pos, normal);
+										}
+										else {
+											set_effect(&play.effcs[ef_reco2], c.pos, normal);
+										}
+
+										//弾痕のセット
+										{
+											float asize = c.spec.caliber * 100.f;
+											t.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm() % normal), asize, asize);
+											t.hit[t.hitbuf].pos = (position - t.vehicle[0].pos).Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].y_vec = normal.Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].z_vec = (normal * c.vec).Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].flug = true;
+											++t.hitbuf %= t.hit.size();
+										}
 									}
+									break;
 								}
+							}
+							if (hitnear.has_value()) {
 								break;
 							}
-						}
-						if (hitnear.has_value()) {
-							break;
-						}
-						//空間装甲、モジュールに当たったのでモジュールに30ダメ、弾なし
-						for (auto& a : t.usetank.space_mesh) {
-							if (tt.first == a) {
-								if (c.spec.caliber >= 0.020f) {
-									set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+							//空間装甲、モジュールに当たったのでモジュールに30ダメ、貫徹力を1/2に
+							for (auto& a : t.usetank.space_mesh) {
+								if (tt.first == a) {
+									if (c.spec.caliber >= 0.020f) {
+										set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									else {
+										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									c.spec.penetration /= 2.0f;
 								}
-								else {
-									set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
-								//爆発する
-								c.flug = false;
 							}
-						}
-						for (auto& a : t.usetank.module_mesh) {
-							if (tt.first == a) {
-								if (c.spec.caliber >= 0.020f) {
-									set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+							for (auto& a : t.usetank.module_mesh) {
+								if (tt.first == a) {
+									if (c.spec.caliber >= 0.020f) {
+										set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									else {
+										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									c.spec.penetration /= 2.0f;
 								}
-								else {
-									set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
-								}
-								t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
-								//爆発する
-								c.flug = false;
 							}
 						}
 					}
+					if (hitnear.has_value())
+						break;
 				}
-				if (hitnear.has_value())
-					break;
+				return (hitnear.has_value());
 			}
-			return (hitnear.has_value());
+			if (c.spec.type == 1) {
+				bool is_hit;
+				std::optional<size_t> hitnear;
+				for (auto& t : tgts) {
+					//自分自身は省く
+					if (play.id == t.id) {
+						continue;
+					}
+					//とりあえず当たったかどうか探す
+					is_hit = false;
+					//モジュール
+					for (auto& m : t.usetank.module_mesh) {
+						t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
+						if (t.hitres[m].HitFlag) {
+							t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
+							is_hit = true;
+						}
+						else {
+							t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
+						}
+					}
+					//空間装甲
+					for (auto& m : t.usetank.space_mesh) {
+						t.hitres[m] = t.usetank.col.CollCheck_Line(c.repos, (c.pos + (c.pos - c.repos).Scale(0.1f)), -1, int(m));
+						if (t.hitres[m].HitFlag) {
+							t.hitssort[m] = pair(m, (c.repos - t.hitres[m].HitPosition).size());
+							is_hit = true;
+						}
+						else {
+							t.hitssort[m] = pair(m, (std::numeric_limits<float>::max)());
+						}
+					}
+					//装甲
+					for (auto& m : t.usetank.armer_mesh) {
+						t.hitres[m.first] = t.usetank.col.CollCheck_Line(c.repos, c.pos, -1, int(m.first));
+						if (t.hitres[m.first].HitFlag) {
+							t.hitssort[m.first] = pair(m.first, (c.repos - t.hitres[m.first].HitPosition).size());
+							is_hit = true;
+						}
+						else {
+							t.hitssort[m.first] = pair(m.first, (std::numeric_limits<float>::max)());
+						}
+					}
+					//当たってない
+					if (!is_hit) {
+						continue;
+					}
+					//当たり判定を近い順にソート
+					std::sort(t.hitssort.begin(), t.hitssort.end(), [](const pair& x, const pair& y) { return x.second < y.second; });
+					//判定
+					{
+						//ダメージ面に届くまで判定
+						for (auto& tt : t.hitssort) {
+							//装甲面に当たらなかったならスルー
+							if (tt.second == (std::numeric_limits<float>::max)()) {
+								break;
+							}
+							//装甲面に当たったのでhitnearに代入して終了
+							for (auto& a : t.usetank.armer_mesh) {
+								if (tt.first == a.first) {
+									hitnear = tt.first;
+									//ダメージ面に当たった時に装甲値に勝てるかどうか
+									{
+										VECTOR_ref normal = t.hitres[hitnear.value()].Normal;
+										VECTOR_ref position = t.hitres[hitnear.value()].HitPosition;
+										if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
+											//貫通
+											//t.id;
+											t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
+											//撃破時エフェクト
+											if (t.HP[0] == 0) {
+												//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
+											}
+											//弾処理
+											c.flug = false;
+											c.vec += normal.Scale((c.vec % normal) * -2.0f);
+											c.vec = c.vec.Norm();
+											c.pos = c.vec.Scale(0.1f) + position;
+											//弾痕
+											t.hit[t.hitbuf].use = 0;
+										}
+										else {
+											//爆発する
+											//弾処理
+											c.flug = false;
+											c.vec += normal.Scale((c.vec % normal) * -2.0f);
+											c.vec = c.vec.Norm();
+											c.pos = c.vec.Scale(0.1f) + position;
+											//弾痕
+											t.hit[t.hitbuf].use = 1;
+										}
+										if (c.spec.caliber >= 0.020f) {
+											set_effect(&play.effcs[ef_reco], c.pos, normal);
+										}
+										else {
+											set_effect(&play.effcs[ef_reco2], c.pos, normal);
+										}
+
+										//弾痕のセット
+										{
+											float asize = c.spec.caliber * 100.f;
+											t.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm() % normal), asize, asize);
+											t.hit[t.hitbuf].pos = (position - t.vehicle[0].pos).Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].y_vec = normal.Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].z_vec = (normal * c.vec).Vtrans(t.vehicle[0].mat.Inverse());
+											t.hit[t.hitbuf].flug = true;
+											++t.hitbuf %= t.hit.size();
+										}
+									}
+									break;
+								}
+							}
+							if (hitnear.has_value()) {
+								break;
+							}
+							//空間装甲、モジュールに当たったのでモジュールに30ダメ、弾なし
+							for (auto& a : t.usetank.space_mesh) {
+								if (tt.first == a) {
+									if (c.spec.caliber >= 0.020f) {
+										set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									else {
+										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									//爆発する
+									c.flug = false;
+								}
+							}
+							for (auto& a : t.usetank.module_mesh) {
+								if (tt.first == a) {
+									if (c.spec.caliber >= 0.020f) {
+										set_effect(&play.effcs[ef_reco], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									else {
+										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
+									}
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									//爆発する
+									c.flug = false;
+								}
+							}
+						}
+					}
+					if (hitnear.has_value())
+						break;
+				}
+				return (hitnear.has_value());
+			}
 		}
 		return false;
 	}
@@ -573,8 +900,7 @@ void fill_id(std::array<T,N>& vect) {
 	}
 }
 //ok
-class UI :hit
-{
+class UI :hit{
 private:
 	GraphHandle circle;
 	GraphHandle aim;
@@ -639,7 +965,7 @@ public:
 				if (p.loadcnt != 0.f) {
 					DrawBox(xp, yp, xp + 200 - int(200.f*p.loadcnt / p.loadcnt_all), yp + 24, GetColor(255, 0, 0), TRUE);
 				}
-				font18.DrawString(xp, yp, p.Ammo[p.useammo].spec.name, GetColor(255, 255, 255));
+				font18.DrawString(xp, yp, p.bullet[p.usebullet].spec.name, GetColor(255, 255, 255));
 				i++;
 			}
 		}
@@ -652,7 +978,7 @@ public:
 				if (p.loadcnt != 0.f) {
 					DrawBox(xp, yp, xp + 200 - int(200.f*p.loadcnt / p.loadcnt_all), yp + 18, GetColor(255, 0, 0), TRUE);
 				}
-				font18.DrawString(xp, yp, p.Ammo[p.useammo].spec.name, GetColor(255, 255, 255));
+				font18.DrawString(xp, yp, p.bullet[p.usebullet].spec.name, GetColor(255, 255, 255));
 				i++;
 			}
 		}
@@ -661,5 +987,92 @@ public:
 
 		font18.DrawStringFormat(0, 300, GetColor(255, 255, 255), "%6.2f km/h", chara.vehicle[1].speed*3.6f);
 	}
+};
+//
+class HostPassEffect :hit {
+private:
+	GraphHandle SkyScreen;
+	GraphHandle FarScreen;
+	GraphHandle MainScreen;
+	GraphHandle NearScreen;
+	GraphHandle GaussScreen;
+	const int EXTEND = 4;				  /*ブルーム用*/
+public:
+	HostPassEffect() {
+		SkyScreen = GraphHandle::Make(dispx, dispy);
+		FarScreen = GraphHandle::Make(dispx, dispy, true);
+		MainScreen = GraphHandle::Make(dispx, dispy, true);
+		NearScreen = GraphHandle::Make(dispx, dispy, true);
+		GaussScreen = GraphHandle::Make(dispx / EXTEND, dispy / EXTEND); /*エフェクト*/
+	}
+
+	~HostPassEffect() {
+
+	}
+	//被写体深度描画
+	template <typename T1, typename T2>
+	void dof(
+		GraphHandle* buf,
+		T1 sky_doing, T2 doing,
+		const VECTOR_ref& campos, const VECTOR_ref& camvec, const VECTOR_ref& camup, const float& fov,
+		const float& far_distance = 1000.f, const float& near_distance = 100.f
+	) {
+		SetDrawScreen(SkyScreen.get());
+		ClearDrawScreen();
+		SetCameraNearFar(1000.0f, 5000.0f);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec((VECTOR_ref(campos) - camvec).get(), VGet(0, 0, 0), camup.get());
+		sky_doing();
+		SetDrawScreen(FarScreen.get());
+		ClearDrawScreen();
+
+		SetCameraNearFar(far_distance, 6000.0f);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
+		{
+			SkyScreen.DrawGraph(0, 0, FALSE);
+		}
+		doing();
+
+		SetDrawScreen(MainScreen.get());
+		ClearDrawScreen();
+		SetCameraNearFar(near_distance, far_distance + 50.f);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
+		{
+			Effekseer_Sync3DSetting();
+			GraphFilter(FarScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 200);
+			FarScreen.DrawGraph(0, 0, false);
+			UpdateEffekseer3D(); //2.0ms
+		}
+		doing();
+		DrawEffekseer3D();
+
+		SetDrawScreen(NearScreen.get());
+		ClearDrawScreen();
+		SetCameraNearFar(0.01f, near_distance + 0.5f);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
+		doing();
+
+		SetDrawScreen(buf->get());
+		ClearDrawScreen();
+		{
+			MainScreen.DrawGraph(0, 0, false);
+			NearScreen.DrawGraph(0, 0, true);
+		}
+	}
+	//ブルームエフェクト
+	void bloom(GraphHandle& BufScreen, const int& level=255) {
+		GraphFilter(BufScreen.get(), DX_GRAPH_FILTER_TWO_COLOR, 245, GetColor(0, 0, 0), 255, GetColor(128, 128, 128), 255);
+		GraphFilterBlt(BufScreen.get(), GaussScreen.get(), DX_GRAPH_FILTER_DOWN_SCALE, EXTEND);
+		GraphFilter(GaussScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 1000);
+		SetDrawMode(DX_DRAWMODE_BILINEAR);
+		SetDrawBlendMode(DX_BLENDMODE_ADD, level);
+		GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
+		GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
+		SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+	}
+public:
 };
 //

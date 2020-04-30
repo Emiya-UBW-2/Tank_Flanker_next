@@ -1,5 +1,0 @@
-maxspeed=600
-midspeed=350
-minspeed=130
-rad=60
-end

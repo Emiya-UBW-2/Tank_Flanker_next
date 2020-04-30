@@ -33,10 +33,10 @@ static std::string getright(const char* p1) {
 	return tempname.substr(tempname.find('=') + 1);
 }
 //
-static MATRIX_ref Axis1(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
-static MATRIX_ref Axis1(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec, VECTOR_ref pos) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
-static MATRIX_ref Axis2(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
-static MATRIX_ref Axis2(VECTOR_ref xvec, VECTOR_ref yvec, VECTOR_ref zvec, VECTOR_ref pos) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
+static MATRIX_ref Axis1(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
+static MATRIX_ref Axis1(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec, const VECTOR_ref& pos) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
+//static MATRIX_ref Axis2(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
+//static MATRIX_ref Axis2(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec, const VECTOR_ref& pos) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
 static MATRIX_ref RotX(const float& rad) noexcept { return { DxLib::MGetRotX(rad) }; }
 static MATRIX_ref RotY(const float& rad) noexcept { return { DxLib::MGetRotY(rad) }; }
 static MATRIX_ref RotZ(const float& rad) noexcept { return { DxLib::MGetRotZ(rad) }; }
@@ -56,4 +56,27 @@ static const float getparam_f(int p1) {
 	FileRead_gets(mstr, 64, p1);
 	return std::stof(getright(mstr));
 }
+//
+void easing_set(float* first, const float& aim, const float& ratio, const float& fps) {
+	if (ratio == 0.f) {
+		*first = aim;
+	}
+	else {
+		if (aim != 0.f) {
+			*first += (aim - *first)*(1.f - powf(ratio, 60.f / fps));
+		}
+		else {
+			*first *= powf(ratio, 60.f / fps);
+		}
+	}
+};
+//
+void easing_set(VECTOR_ref* first, const VECTOR_ref& aim, const float& ratio, const float& fps) {
+	if (ratio == 0.f) {
+		*first = aim;
+	}
+	else {
+		*first += (VECTOR_ref(aim) - *first).Scale(1.f - powf(ratio, 60.f / fps));
+	}
+};
 //
