@@ -3,10 +3,13 @@ speed_flont=48
 speed_back=-16
 body_rad=40
 turret_rad=60
+HP=100
 gun_0_name=L1A3
 gun_0_loadcnt=5.5
+gun_0_round=100
 gun_0_useammo0=M728 APDS
 gun_1_name=MG3
 gun_1_loadcnt=0.16
+gun_1_round=1000
 gun_1_useammo0=NATO 7.62
 end

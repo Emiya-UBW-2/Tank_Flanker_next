@@ -43,6 +43,13 @@ public:
 	int GetDrawWidth(std::basic_string_view<TCHAR> String, bool VerticalFlag = false) const noexcept {
 		return DxLib::GetDrawNStringWidthToHandle(String.data(), String.size(), this->handle_, VerticalFlag);
 	}
+
+	template <typename... Args>
+	int GetDrawWidthFormat(std::string String, Args&&... args) const noexcept {
+		return DxLib::GetDrawFormatStringWidthToHandle(this->handle_,String.c_str(),args...);
+	}
+
+
 	static FontHandle Create(std::basic_string_view<TCHAR> FontName, int Size, int FontType = -1, int CharSet = -1, int EdgeSize = -1, bool Italic = false) noexcept {
 		return { DxLib::CreateFontToHandleWithStrLen(FontName.data(), FontName.length(), Size, Size/3, FontType, CharSet, EdgeSize, Italic) };
 	}

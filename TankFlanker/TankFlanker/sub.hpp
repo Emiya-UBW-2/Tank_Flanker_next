@@ -38,12 +38,12 @@ namespace std {
 	};
 };
 //要改善
-class hit{
+class hit {
 public:
 	typedef std::pair<int, VECTOR_ref> frames;
 	//共通
 	struct gun {
-		int type;
+		int type = 0;
 		frames frame1;
 		frames frame2;
 		frames frame3;
@@ -51,21 +51,22 @@ public:
 		std::string name;
 		float load_time = 0.f;
 		std::vector<std::string> useammo;
+		uint16_t rounds=0;
 	};
 	struct foot {
 		frames frame;
 		EffectS gndsmkeffcs;
-		float gndsmksize;
+		float gndsmksize = 1.f;
 	};
 
 	//弾薬
 	class Ammos {
 	public:
 		std::string name;
-		int16_t type;
-		float caliber;
-		float penetration;
-		float speed;
+		int16_t type=0;
+		float caliber = 0.f;
+		float penetration = 0.f;
+		float speed = 0.f;
 	};
 	static void set_ammos(std::vector<hit::Ammos>* Ammos) {
 		auto& a = *Ammos;
@@ -124,17 +125,18 @@ public:
 		MV1 obj;
 		MV1 col;
 		std::string name;
-		float body_rad_limit;/*旋回速度(度/秒)*/
+		float body_rad_limit = 0.f;/*旋回速度(度/秒)*/
 		VECTOR_ref minpos, maxpos;
 		std::vector<gun> gunframe;
 		std::vector<foot> wheelframe;
+		uint16_t HP = 0;
 	public:
-		bool isfloat;						/*浮くかどうか*/
-		float down_in_water;					/*沈む判定箇所*/
-		std::array<int, 4> square;				/*脚*/
-		float flont_speed_limit;				/*前進速度(km/h)*/
-		float back_speed_limit;					/*後退速度(km/h)*/
-		float turret_rad_limit;					/*砲塔駆動速度(度/秒)*/
+		bool isfloat=false;					/*浮くかどうか*/
+		float down_in_water = 0.f;				/*沈む判定箇所*/
+		std::array<int, 4> square{ 0 };				/*脚*/
+		float flont_speed_limit = 0.f;				/*前進速度(km/h)*/
+		float back_speed_limit = 0.f;				/*後退速度(km/h)*/
+		float turret_rad_limit = 0.f;				/*砲塔駆動速度(度/秒)*/
 		std::vector<std::pair<size_t, float>> armer_mesh;	/*装甲ID*/
 		std::vector<size_t> space_mesh;				/*装甲ID*/
 		std::vector<size_t> module_mesh;			/*装甲ID*/
@@ -163,6 +165,7 @@ public:
 			this->minpos = t.minpos;
 			this->maxpos = t.maxpos;
 			this->gunframe = t.gunframe;
+			this->HP = t.HP;
 		}
 	};
 	static void set_tanks(std::vector<hit::Tanks>*tank) {
@@ -328,11 +331,12 @@ public:
 				t.back_speed_limit = getparam_f(mdata);
 				t.body_rad_limit = getparam_f(mdata);
 				t.turret_rad_limit = getparam_f(mdata);
-
+				t.HP = uint16_t(getparam_u(mdata));
 				FileRead_gets(mstr, 64, mdata);
 				for (auto& g : t.gunframe) {
 					g.name = getright(mstr);
 					g.load_time = getparam_f(mdata);
+					g.rounds = uint16_t(getparam_u(mdata));
 					while (true) {
 						FileRead_gets(mstr, 64, mdata);
 						if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
@@ -352,14 +356,15 @@ public:
 		MV1 obj;
 		MV1 col;
 		std::string name;
-		float body_rad_limit;/*旋回速度(度/秒)*/
+		float body_rad_limit = 0.f;/*旋回速度(度/秒)*/
 		VECTOR_ref minpos, maxpos;
 		std::vector<gun> gunframe;
 		std::vector<foot> wheelframe;
+		uint16_t HP = 0;
 	public:
-		float max_speed_limit;/*最高速度(km/h)*/
-		float mid_speed_limit;/*巡行速度(km/h)*/
-		float min_speed_limit;/*失速速度(km/h)*/
+		float max_speed_limit = 0.f;/*最高速度(km/h)*/
+		float mid_speed_limit = 0.f;/*巡行速度(km/h)*/
+		float min_speed_limit = 0.f;/*失速速度(km/h)*/
 		std::vector<frames> burner;
 		frames hook;
 
@@ -381,6 +386,7 @@ public:
 			this->gunframe = t.gunframe;
 			this->burner = t.burner;
 			this->hook = t.hook;
+			this->HP = t.HP;
 		}
 	};
 	static void set_planes(std::vector<hit::Planes>* plane) {
@@ -450,11 +456,12 @@ public:
 				t.mid_speed_limit = getparam_f(mdata) / 3.6f;
 				t.min_speed_limit = getparam_f(mdata) / 3.6f;
 				t.body_rad_limit = getparam_f(mdata);
-
+				t.HP = uint16_t(getparam_u(mdata));
 				FileRead_gets(mstr, 64, mdata);
 				for (auto& g : t.gunframe) {
 					g.name = getright(mstr);
 					g.load_time = getparam_f(mdata);
+					g.rounds = uint16_t(getparam_u(mdata));
 					while (true) {
 						FileRead_gets(mstr, 64, mdata);
 						if (std::string(mstr).find(("useammo" + std::to_string(g.useammo.size()))) == std::string::npos) {
@@ -475,12 +482,12 @@ public:
 		float cnt = 0.f;
 		int color = 0;
 		Ammos spec;
-		float yadd;
+		float yadd=0.f;
 		VECTOR_ref pos, repos, vec;
 	};
 	struct b2Pats {
 		std::unique_ptr<b2Body> body; /**/
-		b2Fixture* playerfix;	 /**/
+		b2Fixture* playerfix{nullptr};	 /**/
 	};
 	struct wallPats {
 		hit::b2Pats b2;
@@ -488,52 +495,53 @@ public:
 	};
 	typedef std::pair<int, float> animes;
 	struct Chara {
-		size_t id;
+		size_t id = 0;
 		//
 		//エフェクト
 		std::array<EffectS, efs_user> effcs; /*effect*/
 		//操作関連
-			bool flight = false;//フライト(形態)フラグ
-			std::array<bool, 15> key;//キー
-			float view_xrad = 0.f,view_yrad = 0.f;//砲塔操作用ベクトル
-		//====================================================
-		//戦車//==================================================
-			Tanks usetank;
-			float wheel_Left = 0.f,wheel_Right = 0.f;    //転輪回転
-			b2Pats mine;				     /*box2d*/
-			float spd;				     /*box2d*/
-			struct Hit {
-				bool flug{ false };		     /*弾痕フラグ*/
-				int use{ 0 };			     /*使用フレーム*/
-				MV1 pic;			     /*弾痕モデル*/
-				VECTOR_ref scale, pos, z_vec, y_vec; /*座標*/
-			};
-			int hitbuf;				     /*使用弾痕*/
-			std::array<Hit, 24> hit;		     /*弾痕*/
-			std::vector<MV1_COLL_RESULT_POLY> hitres;    /*確保*/
-			std::vector<int16_t> HP;		     /*ライフ*/
-			std::vector<pair> hitssort;		     /*フレームに当たった順番*/
-			float xradp_shot = 0.f, xrad_shot = 0.f;     //射撃反動x
-			float zradp_shot = 0.f, zrad_shot = 0.f;     //射撃反動z
-			VECTOR_ref wheel_normal;		     /*ノーマル*/
-		//飛行機//==================================================
-			Planes useplane;		      //
-			animes p_anime_geardown;	      //車輪アニメーション
-			uint8_t changegear_cnt = 0;	      //カウント
-			bool changegear = false;	      //スイッチ
-			float p_landing_per = 0.f;	      //着艦フック
-			uint8_t landing_cnt = 0;	      //カウント
-			bool landing = false;		      //スイッチ
-			std::array<animes, 6> p_animes_rudder;//ラダーアニメーション
-			struct burners{
-				frames frame;
-				MV1 effectobj;
-			};
-			std::vector<burners> p_burner;
+		uint8_t mode = 0;	//フライト(形態)モード
+		std::array<bool, 15> key{false};//キー
+		float view_xrad = 0.f, view_yrad = 0.f;//砲塔操作用ベクトル
+	//====================================================
+	//戦車//==================================================
+		Tanks usetank;
+		float wheel_Left = 0.f, wheel_Right = 0.f;    //転輪回転
+		b2Pats mine;				     /*box2d*/
+		float spd=0.f;				     /*box2d*/
+		struct Hit {
+			bool flug{ false };		     /*弾痕フラグ*/
+			int use{ 0 };			     /*使用フレーム*/
+			MV1 pic;			     /*弾痕モデル*/
+			VECTOR_ref scale, pos, z_vec, y_vec; /*座標*/
+		};
+		int hitbuf=0;				     /*使用弾痕*/
+		std::array<Hit, 24> hit;		     /*弾痕*/
+		std::vector<MV1_COLL_RESULT_POLY> hitres;    /*確保*/
+		std::vector<int16_t> HP;		     /*ライフ*/
+		std::vector<pair> hitssort;		     /*フレームに当たった順番*/
+		float xradp_shot = 0.f, xrad_shot = 0.f;     //射撃反動x
+		float zradp_shot = 0.f, zrad_shot = 0.f;     //射撃反動z
+		VECTOR_ref wheel_normal;		     /*ノーマル*/
+	//飛行機//==================================================
+		Planes useplane;		      //
+		animes p_anime_geardown;	      //車輪アニメーション
+		uint8_t changegear_cnt = 0;	      //カウント
+		bool changegear = false;	      //スイッチ
+		float p_landing_per = 0.f;	      //着艦フック
+		uint8_t landing_cnt = 0;	      //カウント
+		bool landing = false;		      //スイッチ
+		std::array<animes, 6> p_animes_rudder;//ラダーアニメーション
+		struct burners {
+			frames frame;
+			MV1 effectobj;
+		};
+		std::vector<burners> p_burner;
 		//共通項
 		struct vehicles {
 			bool hit_check = false;		      //当たり判定を取るかチェック
-			size_t use_id=0;		      //使用する車両(機材)
+			size_t use_id = 0;		      //使用する車両(機材)
+			uint16_t HP = 0;
 			VECTOR_ref pos;			      //車体座標
 			MATRIX_ref mat;			      //車体回転行列
 			VECTOR_ref add;			      //車体加速度
@@ -541,8 +549,8 @@ public:
 				size_t usebullet{};	      /*使用弾*/
 				std::array<ammos, 64> bullet; /*確保する弾*/
 				float loadcnt{ 0 };	      /*装てんカウンター*/
-				float loadcnt_all{ 0 };	      /*装てん秒数*/
 				float fired{ 0.f };	      /*駐退数*/
+				int16_t rounds{ 0 };
 				gun gun_info;		      /**/
 				std::vector<Ammos> Spec;      /**/
 			};
@@ -625,10 +633,13 @@ public:
 										if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
 											//貫通
 											//t.id;
-											t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
+											t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
+
+
+											t.vehicle[0].HP = std::max<int16_t>(t.vehicle[0].HP - 100, 0); //
 											//撃破時エフェクト
-											if (t.HP[0] == 0) {
-												//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
+											if (t.vehicle[0].HP == 0) {
+												set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.usetank.gunframe[0].frame1.first), VGet(0, 0, 0));
 											}
 											//弾処理
 											c.flug = false;
@@ -681,7 +692,7 @@ public:
 									else {
 										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
 									}
-									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
 									c.spec.penetration /= 2.0f;
 								}
 							}
@@ -693,7 +704,7 @@ public:
 									else {
 										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
 									}
-									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
 									c.spec.penetration /= 2.0f;
 								}
 							}
@@ -771,11 +782,12 @@ public:
 										VECTOR_ref position = t.hitres[hitnear.value()].HitPosition;
 										if (c.spec.penetration > a.second * (1.0f / std::abs(c.vec.Norm() % normal))) {
 											//貫通
-											//t.id;
-											t.HP[0] = std::max<int16_t>(t.HP[0] - 1, 0); //
+											t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
+
+											t.vehicle[0].HP = std::max<int16_t>(t.vehicle[0].HP - 100, 0); //
 											//撃破時エフェクト
-											if (t.HP[0] == 0) {
-												//set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.ptr->engineframe), VGet(0, 0, 0));
+											if (t.vehicle[0].HP == 0) {
+												set_effect(&t.effcs[ef_bomb], t.usetank.obj.frame(t.usetank.gunframe[0].frame1.first), VGet(0, 0, 0));
 											}
 											//弾処理
 											c.flug = false;
@@ -828,7 +840,7 @@ public:
 									else {
 										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
 									}
-									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
 									//爆発する
 									c.flug = false;
 								}
@@ -841,7 +853,7 @@ public:
 									else {
 										set_effect(&play.effcs[ef_reco2], VECTOR_ref(t.hitres[tt.first].HitPosition) + VECTOR_ref(t.hitres[tt.first].Normal).Scale(0.1f), t.hitres[tt.first].Normal);
 									}
-									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 0, 0); //
+									t.HP[tt.first] = std::max<int16_t>(t.HP[tt.first] - 30, 0); //
 									//爆発する
 									c.flug = false;
 								}
@@ -888,19 +900,19 @@ void find_folders(const char* name, std::vector<hit::Planes>* doing) {
 }
 
 template <class T>
-void fill_id(std::vector<T>& vect){
+void fill_id(std::vector<T>& vect) {
 	for (int i = 0; i < vect.size(); i++) {
 		vect[i].id = i;
 	}
 }
-template <class T,size_t N >
-void fill_id(std::array<T,N>& vect) {
+template <class T, size_t N >
+void fill_id(std::array<T, N>& vect) {
 	for (int i = 0; i < vect.size(); i++) {
 		vect[i].id = i;
 	}
 }
 //ok
-class UI :hit{
+class UI :hit {
 private:
 	GraphHandle circle;
 	GraphHandle aim;
@@ -915,25 +927,27 @@ public:
 		aim = GraphHandle::Load("data/UI/battle_aim.bmp");
 		scope = GraphHandle::Load("data/UI/battle_scope.png");
 
-		CompassScreen = GraphHandle::Make(240, 240,true);
+		CompassScreen = GraphHandle::Make(240, 240, true);
 		MV1::Load("data/compass/model.mv1", &Compass);
-		font18 = FontHandle::Create(18);
+		font18 = FontHandle::Create(18, DX_FONTTYPE_EDGE);
 	}
 	~UI() {
 
 	}
 
 	void draw(const VECTOR_ref& aimpos, const hit::Chara& chara, const bool& ads) {
-		{
+		if (chara.mode == 1) {
 			auto scr = GetDrawScreen();
 			auto fov = GetCameraFov();
 			{
 				SetDrawScreen(CompassScreen.get());
 				ClearDrawScreen();
-				SetupCamera_Ortho(2.f);
+				SetupCamera_Ortho(1.f);
 				SetCameraPositionAndTargetAndUpVec(VGet(0.f, 0.f, 3.f), VGet(0.f, 0.f, 0.f), VGet(0.f, -1.f, 0.f));
 				SetCameraNearFar(0.1f, 6.0f);
-				SetUseLighting(FALSE);
+				auto ltd = GetLightDirection();
+				SetLightDirection(VGet(0.f, 0.f, -1.f));
+				//SetUseLighting(FALSE);
 				Compass.SetRotationZYAxis(
 					VECTOR_ref(VGet(0.f, 0.f, 1.f)).Vtrans(chara.vehicle[1].mat.Inverse()),
 					VECTOR_ref(VGet(0.f, 1.f, 0.f)).Vtrans(chara.vehicle[1].mat.Inverse()),
@@ -941,7 +955,8 @@ public:
 				);
 				Compass.SetPosition(VGet(0.f, 0.f, 0.f));
 				Compass.DrawModel();
-				SetUseLighting(TRUE);
+				//SetUseLighting(TRUE);
+				SetLightDirection(ltd);
 			}
 			SetDrawScreen(scr);
 			SetupCamera_Perspective(fov);
@@ -957,35 +972,54 @@ public:
 		}
 
 		int i = 0;
-		if (!chara.flight) {
-			for (auto& p : chara.vehicle[0].Gun_) {
-				int xp = 20 + 30 - (30 * (i + 1) / int(chara.vehicle[0].Gun_.size()));
-				int yp = 200 + i * 32;
-				DrawBox(xp, yp, xp + 200, yp + 24, GetColor(128, 128, 128), TRUE);
-				if (p.loadcnt != 0.f) {
-					DrawBox(xp, yp, xp + 200 - int(200.f*p.loadcnt / p.loadcnt_all), yp + 24, GetColor(255, 0, 0), TRUE);
-				}
-				font18.DrawString(xp, yp, p.bullet[p.usebullet].spec.name, GetColor(255, 255, 255));
-				i++;
+		for (auto& p : chara.vehicle[chara.mode].Gun_) {
+			int xp = 20 + 30 - (30 * (i + 1) / int(chara.vehicle[chara.mode].Gun_.size()));
+			int yp = 200 + i * 42;
+			DrawBox(xp, yp, xp + 200, yp + 38, GetColor(128, 128, 128), TRUE);
+			if (p.loadcnt != 0.f) {
+				DrawBox(xp, yp, xp + 200 - int(200.f*p.loadcnt / p.gun_info.load_time), yp + 18, GetColor(255, 0, 0), TRUE);
+			}
+			else {
+				DrawBox(xp, yp, xp + 200, yp + 18, GetColor(0, 255, 0), TRUE);
+			}
+			if (p.rounds != 0.f) {
+				DrawBox(xp, yp + 20, xp + int(200.f*p.rounds / p.gun_info.rounds), yp + 38, GetColor(255, 192, 0), TRUE);
+			}
+			font18.DrawString(xp, yp, p.bullet[p.usebullet].spec.name, GetColor(255, 255, 255));
+			font18.DrawStringFormat(xp + 200 - font18.GetDrawWidthFormat("%04d / %04d", p.rounds, p.gun_info.rounds), yp + 20, GetColor(255, 255, 255), "%04d / %04d", p.rounds, p.gun_info.rounds);
+			i++;
+		}
+		if (chara.mode == 1) {
+			CompassScreen.DrawExtendGraph(dispx * 2 / 3, dispy * 2 / 3, dispx * 2 / 3 + 240 / 2, dispy * 2 / 3 + 240 / 2, true);
+
+
+
+			DrawLine(dispx / 3, dispy / 3, dispx / 3, dispy * 2 / 3, GetColor(255, 255, 255), 3);
+			font18.DrawStringFormat(dispx / 3 - font18.GetDrawWidthFormat("SPD %6.2f km/h ", chara.vehicle[1].speed*3.6f), dispy / 2, GetColor(255, 255, 255), "SPD %6.2f km/h", chara.vehicle[1].speed*3.6f);
+
+			DrawLine(dispx * 2 / 3, dispy / 3, dispx * 2 / 3, dispy * 2 / 3, GetColor(255, 255, 255), 3);
+			font18.DrawStringFormat(dispx * 2 / 3, dispy / 2, GetColor(255, 255, 255), " %4d m", int(chara.vehicle[1].pos.y()));
+
+			if (chara.vehicle[1].speed < chara.useplane.min_speed_limit) {
+				font18.DrawString(dispx / 2 - font18.GetDrawWidth("STALL") / 2, dispy / 3, "STALL", GetColor(255, 0, 0));
+			}
+			if (chara.vehicle[1].pos.y() <= 30.f) {
+				font18.DrawString(dispx / 2 - font18.GetDrawWidth("GPWS") / 2, dispy / 3 + 18, "GPWS", GetColor(255, 255, 0));
 			}
 		}
-		else {
-			for (auto& p : chara.vehicle[1].Gun_) {
-				int xp = 20 + 30 - (30 * (i + 1) / int(chara.vehicle[0].Gun_.size()));
-				int yp = 200 + i * 32;
 
-				DrawBox(xp, yp, xp + 200, yp + 18, GetColor(128, 128, 128), TRUE);
-				if (p.loadcnt != 0.f) {
-					DrawBox(xp, yp, xp + 200 - int(200.f*p.loadcnt / p.loadcnt_all), yp + 18, GetColor(255, 0, 0), TRUE);
-				}
-				font18.DrawString(xp, yp, p.bullet[p.usebullet].spec.name, GetColor(255, 255, 255));
-				i++;
+		{
+			int j = 0;
+			font18.DrawStringFormat(200, 300 + j * 24, GetColor(255, 255, 255), "HP : %d", chara.vehicle[0].HP);
+			j++;
+			font18.DrawStringFormat(200, 300 + j * 24, GetColor(255, 255, 255), "HP : %d", chara.vehicle[1].HP);
+			j++;
+
+			for (auto& h : chara.HP) {
+				font18.DrawStringFormat(200, 300 + j * 24, GetColor(255, 255, 255), "HP : %d", h);
+				j++;
 			}
 		}
-
-		CompassScreen.DrawGraph(400, 400, true);
-
-		font18.DrawStringFormat(0, 300, GetColor(255, 255, 255), "%6.2f km/h", chara.vehicle[1].speed*3.6f);
 	}
 };
 //
@@ -1063,7 +1097,7 @@ public:
 		}
 	}
 	//ブルームエフェクト
-	void bloom(GraphHandle& BufScreen, const int& level=255) {
+	void bloom(GraphHandle& BufScreen, const int& level = 255) {
 		GraphFilter(BufScreen.get(), DX_GRAPH_FILTER_TWO_COLOR, 245, GetColor(0, 0, 0), 255, GetColor(128, 128, 128), 255);
 		GraphFilterBlt(BufScreen.get(), GaussScreen.get(), DX_GRAPH_FILTER_DOWN_SCALE, EXTEND);
 		GraphFilter(GaussScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 1000);

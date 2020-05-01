@@ -32,11 +32,11 @@ enum Effect {
 };
 struct EffectS {
 	bool flug{ false };		 /**/
-	size_t id;
+	size_t id = 0;
 	Effekseer3DPlayingHandle handle; /**/
 	VECTOR_ref pos;			 /**/
 	VECTOR_ref nor;			 /**/
-	float scale;		 /**/
+	float scale = 1.f;		 /**/
 };
 
 class DXDraw {
@@ -50,9 +50,9 @@ private:
 		unsigned int col = 0;
 	};
 	std::vector<color> colors;
-	//bool use_vsync = false;
-	bool use_vsync = true;
-
+	bool use_vsync = false;
+	//bool use_vsync = true;
+	float frate = 60.f;
 	std::array<EffekseerEffectHandle, effects> effHndle; /*エフェクトリソース*/
 	EffekseerEffectHandle gndsmkHndle;		     /*エフェクトリソース*/
 public:
@@ -62,17 +62,20 @@ public:
 	const EffekseerEffectHandle& get_gndhitHandle() const noexcept { return gndsmkHndle; }
 
 
-	DXDraw(const char* title) {
+	DXDraw(const char* title, const float& fps = 60.f) {
+		frate = fps;
 		SetOutApplicationLogValidFlag(FALSE);					/*log*/
 		SetMainWindowText(title);						/*タイトル*/
 		//SetUsePixelLighting(TRUE);						/*ピクセルシェーダの使用*/
 		ChangeWindowMode(TRUE);							/*窓表示*/
 		SetUseDirect3DVersion(DX_DIRECT3D_11);					/*directX ver*/
+
 		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);				/*垂直同期*/
+
 		//SetUseDirectInputFlag(TRUE);						/**/
 		SetWindowSizeChangeEnableFlag(FALSE, FALSE);				// ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする
 		SetGraphMode(dispx, dispy, 32);						/*解像度*/
-		//SetFullSceneAntiAliasingMode(4, 2);
+		SetFullSceneAntiAliasingMode(4, 2);
 		DxLib_Init();								/**/
 
 		Effekseer_Init(8000);				    /*Effekseer*/
@@ -157,7 +160,7 @@ public:
 		*/
 		ScreenFlip();
 		if (!use_vsync) {
-			while (GetNowHiPerformanceCount() - waits < 1000000.0f / 60.0f) {}
+			while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
 		}
 		return true;
 	}
@@ -170,7 +173,7 @@ public:
 
 		//二分探索する
 		int min = 0;
-		int max = int(colors.size())- 1;
+		int max = int(colors.size()) - 1;
 
 		/* どんな二分探索でもここの書き方を変えずにできる！ */
 		if (max > 0) {
@@ -253,9 +256,15 @@ public:
 		DrawBox(xpos, ypos, xpos + wide, ypos + hight * 100 / frate, GetColor(255, 0, 0), FALSE);
 		for (int j = 0; j < int(deb.size() - 1); ++j) {
 			for (int i = 0; i < 6; ++i) {
-				DrawLine(xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][i + 1] * 5.f), xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][i + 1] * 5.f), GetColor(50, 128 + 127 * i / 6, 50));
+				DrawLine(
+					xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][i + 1] * 5.f),
+					xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][i + 1] * 5.f),
+					GetColor(50, 128 + 127 * i / 6, 50));
 			}
-			DrawLine(xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][0] * 5.f), xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][0] * 5.f), GetColor(255, 255, 0));
+			DrawLine(
+				xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][0] * 5.f),
+				xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][0] * 5.f),
+				GetColor(255, 255, 0));
 		}
 		const auto c_ffffff = GetColor(255, 255, 255);
 		DrawLine(xpos, ypos + hight * 50 / frate, xpos + wide, ypos + hight * 50 / frate, GetColor(0, 255, 0));

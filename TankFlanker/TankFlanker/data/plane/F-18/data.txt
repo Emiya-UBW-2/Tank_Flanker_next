@@ -2,7 +2,9 @@ maxspeed=800
 midspeed=450
 minspeed=250
 rad=180
+HP=100
 gun_0_name=M61
-gun_0_loadcnt=0.1
+gun_0_loadcnt=0.05
+gun_0_round=570
 gun_0_useammo0=vulcan 20
 end

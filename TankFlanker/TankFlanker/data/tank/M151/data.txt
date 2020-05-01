@@ -3,7 +3,9 @@ speed_flont=120
 speed_back=-40
 body_rad=25
 turret_rad=45
+HP=100
 gun_0_name=M40
 gun_0_loadcnt=7.5
+gun_0_round=30
 gun_0_useammo0=M344A1 HEAT
 end
