@@ -1,3 +1,4 @@
+isfloat=false
 maxspeed=800
 midspeed=450
 minspeed=250

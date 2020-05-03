@@ -40,6 +40,8 @@ static MATRIX_ref Axis1(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VE
 static MATRIX_ref RotX(const float& rad) noexcept { return { DxLib::MGetRotX(rad) }; }
 static MATRIX_ref RotY(const float& rad) noexcept { return { DxLib::MGetRotY(rad) }; }
 static MATRIX_ref RotZ(const float& rad) noexcept { return { DxLib::MGetRotZ(rad) }; }
+
+static MATRIX_ref SetScale(const VECTOR_ref& scale) noexcept { return { DxLib::MGetScale(scale.get()) }; }
 //
 static const long int getparam_i(int p1) {
 	char mstr[64]; /*tank*/

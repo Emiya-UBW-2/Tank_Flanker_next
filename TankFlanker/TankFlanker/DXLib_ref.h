@@ -106,6 +106,8 @@ public:
 		shadow_nearsize = nearsize;
 		shadow_near = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
 		shadow_far = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
+
+		SetShadowMapAdjustDepth(shadow_near, 0.0005f);
 		SetGlobalAmbientLight(GetColorF(0.80f, 0.75f, 0.70f, 0.0f));
 		SetLightDirection(Light_dir.get());
 		SetShadowMapLightDirection(shadow_near, Light_dir.get());
