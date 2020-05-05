@@ -26,22 +26,10 @@ static float deg2rad(T p1) { return float(p1)*DX_PI_F / 180.f; }//角度から�
 template <typename T>
 static float rad2deg(T p1) { return float(p1)*180.f / DX_PI_F;}//ラジアンから角度に
 //
-typedef std::pair<size_t, float> pair;
-//
 static std::string getright(const char* p1) {
 	std::string tempname = p1;
 	return tempname.substr(tempname.find('=') + 1);
 }
-//
-static MATRIX_ref Axis1(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
-static MATRIX_ref Axis1(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec, const VECTOR_ref& pos) noexcept { return { DxLib::MGetAxis1(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
-//static MATRIX_ref Axis2(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),VGet(0,0,0)) }; }
-//static MATRIX_ref Axis2(const VECTOR_ref& xvec, const VECTOR_ref& yvec, const VECTOR_ref& zvec, const VECTOR_ref& pos) noexcept { return { DxLib::MGetAxis2(xvec.get(),yvec.get(),zvec.get(),pos.get()) }; }
-static MATRIX_ref RotX(const float& rad) noexcept { return { DxLib::MGetRotX(rad) }; }
-static MATRIX_ref RotY(const float& rad) noexcept { return { DxLib::MGetRotY(rad) }; }
-static MATRIX_ref RotZ(const float& rad) noexcept { return { DxLib::MGetRotZ(rad) }; }
-
-static MATRIX_ref SetScale(const VECTOR_ref& scale) noexcept { return { DxLib::MGetScale(scale.get()) }; }
 //
 static const long int getparam_i(int p1) {
 	char mstr[64]; /*tank*/
@@ -78,7 +66,7 @@ void easing_set(VECTOR_ref* first, const VECTOR_ref& aim, const float& ratio, co
 		*first = aim;
 	}
 	else {
-		*first += (VECTOR_ref(aim) - *first).Scale(1.f - powf(ratio, 60.f / fps));
+		*first += (VECTOR_ref(aim) - *first)*(1.f - powf(ratio, 60.f / fps));
 	}
 };
 //

@@ -2,7 +2,6 @@
 #include "DxLib.h"
 #include"EffekseerForDXLib.h"
 
-#include "DXLib_vec.hpp"
 #include"DXLib_mat.hpp"
 
 #include "SoundHandle.hpp"
@@ -17,18 +16,16 @@
 #include <list>
 #include <vector>
 enum Effect {
-	ef_fire = 0,
-	ef_reco = 1,
-	ef_bomb = 2,
-	ef_smoke1 = 3,
-	ef_smoke2 = 4,
-	ef_gndhit = 5,
-	ef_gun = 6,
-	ef_gndhit2 = 7,
-	ef_reco2 = 8,
-	effects = 9,   //読み込む
-	ef_smoke3 = 9, //読み込まない
-	efs_user = 10
+	ef_fire	  = 0, //発砲炎
+	ef_reco	  = 1, //大口径跳弾
+	ef_reco2  = 2, //小口径跳弾
+	ef_gndhit = 3, //大口径着弾
+	ef_gndhit2= 4, //小口径着弾
+	ef_bomb   = 5, //撃破爆発
+	ef_smoke1 = 6, //ミサイル炎
+	ef_smoke2 = 7, //銃の軌跡
+	effects   = 8, //読み込む
+	efs_user  = 8  //
 };
 struct EffectS {
 	bool flug{ false };		 /**/
@@ -41,18 +38,13 @@ struct EffectS {
 
 class DXDraw {
 private:
-	const bool use_shadow = true;
-	int shadow_near = 0;/*近影*/
-	int shadow_far = 0;/*遠影*/
-	VECTOR_ref shadow_nearsize;
-	struct color {
-		int buf = -1;
-		unsigned int col = 0;
-	};
-	std::vector<color> colors;
-	bool use_vsync = false;
-	//bool use_vsync = true;
-	float frate = 60.f;
+	const bool use_shadow= true;			     /*影描画*/
+	int shadow_near      = 0;			     /*近影*/
+	int shadow_far       = 0;			     /*遠影*/
+	VECTOR_ref shadow_nearsize;			     /**/
+	bool use_pixellighting= false;			     /**/
+	bool use_vsync= false;				     /*垂直同期*/
+	float frate   = 60.f;				     /*フレームレート*/
 	std::array<EffekseerEffectHandle, effects> effHndle; /*エフェクトリソース*/
 	EffekseerEffectHandle gndsmkHndle;		     /*エフェクトリソース*/
 public:
@@ -61,31 +53,26 @@ public:
 	EffekseerEffectHandle& get_gndhitHandle() noexcept { return gndsmkHndle; }
 	const EffekseerEffectHandle& get_gndhitHandle() const noexcept { return gndsmkHndle; }
 
-
 	DXDraw(const char* title, const float& fps = 60.f) {
 		frate = fps;
-		SetOutApplicationLogValidFlag(FALSE);					/*log*/
-		SetMainWindowText(title);						/*タイトル*/
-		//SetUsePixelLighting(TRUE);						/*ピクセルシェーダの使用*/
-		ChangeWindowMode(TRUE);							/*窓表示*/
-		SetUseDirect3DVersion(DX_DIRECT3D_11);					/*directX ver*/
-
-		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);				/*垂直同期*/
-
-		//SetUseDirectInputFlag(TRUE);						/**/
-		SetWindowSizeChangeEnableFlag(FALSE, FALSE);				// ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする
-		SetGraphMode(dispx, dispy, 32);						/*解像度*/
-		SetFullSceneAntiAliasingMode(4, 2);
-		DxLib_Init();								/**/
-
-		Effekseer_Init(8000);				    /*Effekseer*/
-		SetChangeScreenModeGraphicsSystemResetFlag(FALSE);  /*Effekseer*/
-		Effekseer_SetGraphicsDeviceLostCallbackFunctions(); /*Effekseer*/
-
-		SetAlwaysRunFlag(TRUE);							/*background*/
-		SetUseZBuffer3D(TRUE);							/*zbufuse*/
-		SetWriteZBuffer3D(TRUE);						/*zbufwrite*/
-		SetDrawMode(DX_DRAWMODE_BILINEAR);
+		SetOutApplicationLogValidFlag(FALSE);  /*log*/
+		SetMainWindowText(title);	       /*タイトル*/
+		ChangeWindowMode(TRUE);		       /*窓表示*/
+		SetUseDirect3DVersion(DX_DIRECT3D_11); /*directX ver*/
+		SetGraphMode(dispx, dispy, 32);	       /*解像度*/
+		//SetUseDirectInputFlag(TRUE);			       /**/
+		//SetWindowSizeChangeEnableFlag(FALSE, FALSE);	       /*ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする*/
+		SetUsePixelLighting(use_pixellighting ? TRUE : FALSE); /*ピクセルシェーダの使用*/
+		SetFullSceneAntiAliasingMode(4, 2);		       /*アンチエイリアス*/
+		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);	       /*垂直同期*/
+		DxLib_Init();					       /**/
+		Effekseer_Init(8000);				       /*Effekseer*/
+		SetChangeScreenModeGraphicsSystemResetFlag(FALSE);     /*Effekseer*/
+		Effekseer_SetGraphicsDeviceLostCallbackFunctions();    /*Effekseer*/
+		SetAlwaysRunFlag(TRUE);				       /*background*/
+		SetUseZBuffer3D(TRUE);				       /*zbufuse*/
+		SetWriteZBuffer3D(TRUE);			       /*zbufwrite*/
+		SetDrawMode(DX_DRAWMODE_BILINEAR);		       /**/
 
 		//エフェクト
 		{
@@ -97,7 +84,6 @@ public:
 
 	}
 	~DXDraw(void) {
-		colors.clear();
 		Effkseer_End();
 		DxLib_End();
 	}
@@ -112,7 +98,7 @@ public:
 		SetLightDirection(Light_dir.get());
 		SetShadowMapLightDirection(shadow_near, Light_dir.get());
 		SetShadowMapLightDirection(shadow_far, Light_dir.get());
-		SetShadowMapDrawArea(shadow_far, farsize.Scale(-1.f).get(), farsize.get());
+		SetShadowMapDrawArea(shadow_far, (farsize*-1.f).get(), farsize.get());
 		ShadowMap_DrawSetup(shadow_far);
 		doing();
 		ShadowMap_DrawEnd();
@@ -121,7 +107,7 @@ public:
 	template <typename T>
 	bool Ready_Shadow(const VECTOR_ref& pos, T doing) {
 		if (use_shadow) {
-			SetShadowMapDrawArea(shadow_near, (shadow_nearsize.Scale(-1.f) + pos).get(), (shadow_nearsize + pos).get());
+			SetShadowMapDrawArea(shadow_near, (shadow_nearsize*(-1.f) + pos).get(), (shadow_nearsize + pos).get());
 			ShadowMap_DrawSetup(shadow_near);
 			doing();
 			ShadowMap_DrawEnd();
@@ -142,14 +128,6 @@ public:
 		}
 		return true;
 	}
-	void SetDraw_Screen(const GraphHandle& screen) {
-		SetDrawScreen(screen.get());
-		ClearDrawScreen();
-	}
-	void SetDraw_Screen(const int& screen) {
-		SetDrawScreen(screen);
-		ClearDrawScreen();
-	}
 	bool Screen_Flip(const LONGLONG& waits) {
 		/*
 		{
@@ -165,53 +143,6 @@ public:
 			while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
 		}
 		return true;
-	}
-
-	unsigned int GetColor(int r, int g, int b) {
-		r = std::clamp(r, 0, 255);
-		g = std::clamp(g, 0, 255);
-		b = std::clamp(b, 0, 255);
-		int col = (r << 16 | g << 8 | b);
-
-		//二分探索する
-		int min = 0;
-		int max = int(colors.size()) - 1;
-
-		/* どんな二分探索でもここの書き方を変えずにできる！ */
-		if (max > 0) {
-			while (true) {
-				if (max >= min) {
-					int mid = min + (max - min) / 2;//中間
-					if ((colors[mid].buf > col)) {//大
-						max = mid - 1;
-					}
-					else if ((colors[mid].buf < col)) {//小
-						min = mid + 1;
-					}
-					else {
-						return colors[mid].col;
-					}
-				}
-				else {
-					color p;
-					p.buf = col;
-					p.col = DxLib::GetColor(r, g, b);
-
-					//colors.push_back(p);
-					if (max < min) {
-						colors.insert(colors.begin() + min, p);
-						return colors[min].col;
-					}
-				}
-			}
-		}
-		else {
-			color p;
-			p.buf = col;
-			p.col = DxLib::GetColor(r, g, b);
-			colors.push_back(p);
-			return colors.back().col;
-		}
 	}
 };
 

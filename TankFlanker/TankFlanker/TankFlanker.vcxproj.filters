@@ -29,9 +29,6 @@
     <ClInclude Include="useful.hpp">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="DXLib_vec.hpp">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="DXLib_mat.hpp">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

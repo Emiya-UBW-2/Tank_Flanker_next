@@ -50,4 +50,26 @@ public:
 			DxLib::DrawExtendGraph(posx1, posy1, posx2, posy2, this->handle_, (trns ? TRUE : FALSE));
 		}
 	}
+	//
+	void SetDraw_Screen() {
+		SetDrawScreen(this->handle_);
+		ClearDrawScreen();
+	}
+	void SetDraw_Screen(const float& near_, const float& far_, const float& fov, const VECTOR_ref& campos, const VECTOR_ref& camvec, const VECTOR_ref& camup) {
+		SetDraw_Screen();
+		SetCameraNearFar(near_, far_);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
+	}
+	//
+	static void SetDraw_Screen(const int& handle) {
+		SetDrawScreen(handle);
+		ClearDrawScreen();
+	}
+	static void SetDraw_Screen(const int& handle, const float& near_, const float& far_, const float& fov, const VECTOR_ref& campos, const VECTOR_ref& camvec, const VECTOR_ref& camup) {
+		SetDraw_Screen(handle);
+		SetCameraNearFar(near_, far_);
+		SetupCamera_Perspective(fov);
+		SetCameraPositionAndTargetAndUpVec(campos.get(), camvec.get(), camup.get());
+	}
 };

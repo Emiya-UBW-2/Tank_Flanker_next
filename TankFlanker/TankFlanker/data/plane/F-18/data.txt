@@ -8,4 +8,8 @@ gun_0_name=M61
 gun_0_loadcnt=0.05
 gun_0_round=570
 gun_0_useammo0=vulcan 20
+gun_1_name=MISSILE
+gun_1_loadcnt=8
+gun_1_round=4
+gun_1_useammo0=AIM9-X
 end

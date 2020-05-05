@@ -1,6 +1,5 @@
 #pragma once
 #include <DxLib.h>
-#include"DXLib_mat.hpp"
 class VECTOR_ref {
 	VECTOR value;
 public:
@@ -23,10 +22,9 @@ public:
 	//内積
 	float operator%(VECTOR_ref obj) { return DxLib::VDot(this->value, obj.value); }
 	//行列取得
-	MATRIX_ref Mtrans() const noexcept { return DxLib::MGetTranslate(this->value); }
-	MATRIX_ref GetRotAxis(const float& p1) const noexcept { return DxLib::MGetRotAxis(this->value,p1); }
+	//MATRIX_ref Mtrans() const noexcept { return DxLib::MGetTranslate(this->value); }
+	//MATRIX_ref GetRotAxis(const float& p1) const noexcept { return DxLib::MGetRotAxis(this->value,p1); }
 	//
-	VECTOR_ref Vtrans(const MATRIX_ref& p1) const noexcept { return DxLib::VTransform(this->value,p1.get()); }
 	//サイズ変更
 	VECTOR_ref Scale(float p1) const noexcept { return VECTOR_ref(DxLib::VScale(this->value, p1)); }
 	//正規化

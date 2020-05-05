@@ -160,7 +160,6 @@
   <ItemGroup>
     <ClInclude Include="DXLib_mat.hpp" />
     <ClInclude Include="DXLib_ref.h" />
-    <ClInclude Include="DXLib_vec.hpp" />
     <ClInclude Include="EffekseerEffectHandle.hpp" />
     <ClInclude Include="FontHandle.hpp" />
     <ClInclude Include="GraphHandle.hpp" />
