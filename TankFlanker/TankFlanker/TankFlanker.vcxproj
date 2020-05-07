@@ -163,10 +163,13 @@
     <ClInclude Include="EffekseerEffectHandle.hpp" />
     <ClInclude Include="FontHandle.hpp" />
     <ClInclude Include="GraphHandle.hpp" />
+    <ClInclude Include="HostPass.hpp" />
     <ClInclude Include="make_thread.hpp" />
+    <ClInclude Include="map.hpp" />
     <ClInclude Include="MV1ModelHandle.hpp" />
     <ClInclude Include="SoundHandle.hpp" />
     <ClInclude Include="sub.hpp" />
+    <ClInclude Include="UI.hpp" />
     <ClInclude Include="useful.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

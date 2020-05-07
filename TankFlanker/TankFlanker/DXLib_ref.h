@@ -41,7 +41,6 @@ private:
 	const bool use_shadow= true;			     /*影描画*/
 	int shadow_near      = 0;			     /*近影*/
 	int shadow_far       = 0;			     /*遠影*/
-	VECTOR_ref shadow_nearsize;			     /**/
 	bool use_pixellighting= false;			     /**/
 	bool use_vsync= false;				     /*垂直同期*/
 	float frate   = 60.f;				     /*フレームレート*/
@@ -63,7 +62,7 @@ public:
 		//SetUseDirectInputFlag(TRUE);			       /**/
 		//SetWindowSizeChangeEnableFlag(FALSE, FALSE);	       /*ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする*/
 		SetUsePixelLighting(use_pixellighting ? TRUE : FALSE); /*ピクセルシェーダの使用*/
-		SetFullSceneAntiAliasingMode(4, 2);		       /*アンチエイリアス*/
+		//SetFullSceneAntiAliasingMode(4, 2);		       /*アンチエイリアス*/
 		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);	       /*垂直同期*/
 		DxLib_Init();					       /**/
 		Effekseer_Init(8000);				       /*Effekseer*/
@@ -88,14 +87,10 @@ public:
 		DxLib_End();
 	}
 	template <typename T>
-	bool Set_Shadow(const size_t& scale, const VECTOR_ref& nearsize, const VECTOR_ref& farsize, const VECTOR_ref& Light_dir, T doing) {
-		shadow_nearsize = nearsize;
+	bool Set_Shadow(const size_t& scale, const VECTOR_ref& farsize, const VECTOR_ref& Light_dir, T doing) {
 		shadow_near = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
 		shadow_far = MakeShadowMap(int(pow(2, scale)), int(pow(2, scale)));
-
 		SetShadowMapAdjustDepth(shadow_near, 0.0005f);
-		SetGlobalAmbientLight(GetColorF(0.80f, 0.75f, 0.70f, 0.0f));
-		SetLightDirection(Light_dir.get());
 		SetShadowMapLightDirection(shadow_near, Light_dir.get());
 		SetShadowMapLightDirection(shadow_far, Light_dir.get());
 		SetShadowMapDrawArea(shadow_far, (farsize*-1.f).get(), farsize.get());
@@ -104,10 +99,18 @@ public:
 		ShadowMap_DrawEnd();
 		return true;
 	}
+
+	bool Set_light(const VECTOR_ref& Light_dir) {
+		SetGlobalAmbientLight(GetColorF(0.80f, 0.75f, 0.70f, 0.0f));
+		SetLightDirection(Light_dir.get());
+		return true;
+	}
+
+
 	template <typename T>
-	bool Ready_Shadow(const VECTOR_ref& pos, T doing) {
+	bool Ready_Shadow(const VECTOR_ref& pos, T doing, const VECTOR_ref& nearsize) {
 		if (use_shadow) {
-			SetShadowMapDrawArea(shadow_near, (shadow_nearsize*(-1.f) + pos).get(), (shadow_nearsize + pos).get());
+			SetShadowMapDrawArea(shadow_near, (nearsize*(-1.f) + pos).get(), (VECTOR_ref(nearsize) + pos).get());
 			ShadowMap_DrawSetup(shadow_near);
 			doing();
 			ShadowMap_DrawEnd();

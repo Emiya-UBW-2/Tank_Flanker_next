@@ -1,0 +1,56 @@
+name       =M728 APDS
+type       =0
+caliber    =0.105
+penetration=268
+speed      =1426
+damage     =10
+
+name       =M393 HESH
+type       =1
+caliber    =0.105
+penetration=145
+speed      =730
+damage     =10
+
+name       =NATO 7.62
+type       =1
+caliber    =0.00762
+penetration=12
+speed      =600
+damage     =10
+
+name       =BR-412D APCBC
+type       =0
+caliber    =0.100
+penetration=175
+speed      =887
+damage     =6
+
+name       =USSR 12.7
+type       =1
+caliber    =0.0127
+penetration=24
+speed      =850
+damage     =6
+
+name       =vulcan 20
+type       =1
+caliber    =0.020
+penetration=30
+speed      =800
+damage     =6
+
+name       =M344A1 HEAT
+type       =1
+caliber    =0.106
+penetration=400
+speed      =503
+damage     =30
+
+name       =AIM9-X
+type       =2
+caliber    =0.127
+penetration=120
+speed      =600
+damage     =80
+end

@@ -1,0 +1,3 @@
+hostpass=true
+bloom=true
+shadow=true
