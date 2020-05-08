@@ -24,7 +24,7 @@ public:
 		MV1::Load("data/model/sea/model.mv1", &sea, true);	 //海
 	}
 
-	void set_map(std::vector<hit::wallPats>* wall, std::vector<hit::treePats>* tree) {
+	void set_map(std::vector<hit::wallPats>* wall, std::vector<hit::treePats>* tree, std::unique_ptr<b2World>& world) {
 		map.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
 
 		VECTOR_ref size;
@@ -75,22 +75,56 @@ public:
 				}
 				else if (p.Polygons[i].MaterialIndex == 3) {
 					//木
-					{
-						tree->resize(tree->size() + 1);
-						tree->back().mat = MATRIX_ref::Scale(VGet(15.f / 10.f, 15.f / 10.f, 15.f / 10.f));
-						tree->back().pos = (VECTOR_ref(p.Vertexs[p.Polygons[i].VIndex[0]].Position) + p.Vertexs[p.Polygons[i].VIndex[1]].Position + p.Vertexs[p.Polygons[i].VIndex[2]].Position) * (1.f / 3.f);
-						tree->back().fall_flag = false;
-						tree->back().fall_vec = VGet(0.f, 0.f, 1.f);
-						tree->back().fall_rad = 0.f;
+					tree->resize(tree->size() + 1);
+					tree->back().mat = MATRIX_ref::Scale(VGet(15.f / 10.f, 15.f / 10.f, 15.f / 10.f));
+					tree->back().pos = (VECTOR_ref(p.Vertexs[p.Polygons[i].VIndex[0]].Position) + p.Vertexs[p.Polygons[i].VIndex[1]].Position + p.Vertexs[p.Polygons[i].VIndex[2]].Position) * (1.f / 3.f);
+					tree->back().fall_flag = false;
+					tree->back().fall_vec = VGet(0.f, 0.f, 1.f);
+					tree->back().fall_rad = 0.f;
 
-						tree->back().obj = tree_model.Duplicate();
-						tree->back().obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
-						tree->back().obj_far = tree_far.Duplicate();
-						tree->back().obj_far.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
-					}
+					tree->back().obj = tree_model.Duplicate();
+					tree->back().obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
+					tree->back().obj_far = tree_far.Duplicate();
+					tree->back().obj_far.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
 				}
 			}
 		}
+
+		for (auto& w : *wall) {
+			std::array<b2Vec2, 2> vs;
+			vs[0].Set(w.pos[0].x(), w.pos[0].z());
+			vs[1].Set(w.pos[1].x(), w.pos[1].z());
+			b2ChainShape chain;		// This a chain shape with isolated vertices
+			chain.CreateChain(&vs[0], 2);
+			b2FixtureDef fixtureDef;			       /*動的ボディフィクスチャを定義します*/
+			fixtureDef.shape = &chain;			       /**/
+			fixtureDef.density = 1.0f;			       /*ボックス密度をゼロ以外に設定すると、動的になります*/
+			fixtureDef.friction = 0.3f;			       /*デフォルトの摩擦をオーバーライドします*/
+			b2BodyDef bodyDef;				       /*ダイナミックボディを定義します。その位置を設定し、ボディファクトリを呼び出します*/
+			bodyDef.type = b2_staticBody;			       /**/
+			bodyDef.position.Set(0, 0);			       /**/
+			bodyDef.angle = 0.f;				       /**/
+			w.b2.body.reset(world->CreateBody(&bodyDef));	  /**/
+			w.b2.playerfix = w.b2.body->CreateFixture(&fixtureDef); /*シェイプをボディに追加します*/
+		}
+	}
+	void delete_map(std::vector<hit::wallPats>* wall, std::vector<hit::treePats>* tree) {
+		map.Dispose();		   //map
+		map_col.Dispose();		   //mapコリジョン
+		tree_model.Dispose(); //木
+		tree_far.Dispose(); //木
+		sky.Dispose();	 //空
+		sea.Dispose();	 //海
+		for(auto&t : *tree){
+			t.obj.Dispose();
+			t.obj_far.Dispose();
+		}
+		for (auto& w : *wall) {
+			delete w.b2.playerfix->GetUserData();
+			w.b2.playerfix->SetUserData(NULL);
+		}
+		wall->clear();
+		tree->clear();
 
 	}
 

@@ -99,6 +99,11 @@ public:
 		ShadowMap_DrawEnd();
 		return true;
 	}
+	bool Delete_Shadow() {
+		DeleteShadowMap(shadow_near);
+		DeleteShadowMap(shadow_far);
+		return true;
+	}
 
 	bool Set_light(const VECTOR_ref& Light_dir) {
 		SetGlobalAmbientLight(GetColorF(0.80f, 0.75f, 0.70f, 0.0f));

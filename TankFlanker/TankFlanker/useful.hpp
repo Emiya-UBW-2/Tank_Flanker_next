@@ -10,12 +10,12 @@ using std::uint8_t;
 
 constexpr float M_GR = -9.8f;				  /*重力加速度*/
 
-inline const int deskx    = (GetSystemMetrics(SM_CXSCREEN)); /*デスクトップX*/
-inline const int desky    = (GetSystemMetrics(SM_CYSCREEN)); /*デスクトップY*/
-inline const int dispx    = deskx;			     /*描画X*/
-inline const int dispy    = desky;			     /*描画Y*/
-inline const int out_dispx= dispx;			     /*ウィンドウX*/
-inline const int out_dispy= dispy / 2;			     // +256; /*ウィンドウY*/
+inline const int deskx    = (GetSystemMetrics(SM_CXSCREEN));	/*デスクトップX*/
+inline const int desky    = (GetSystemMetrics(SM_CYSCREEN));	/*デスクトップY*/
+inline const int dispx    = deskx;				/*描画X*/
+inline const int dispy    = desky;				/*描画Y*/
+//inline const int dispx = 1080;					/*描画X*/
+//inline const int dispy = 1200;					/*描画Y*/
 //リサイズ
 #define x_r(p1) (int(p1) * dispx / deskx)
 #define y_r(p1) (int(p1) * dispy / desky)

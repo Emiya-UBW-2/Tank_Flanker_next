@@ -83,9 +83,9 @@ public:
 	}
 	//戦車
 	class Vehcs {
-		std::string name;				  /**/
 	public:
 		//共通
+		std::string name;				  /**/
 		MV1 obj,col;					  /**/
 		VECTOR_ref minpos, maxpos;			  /**/
 		std::vector<gun> gunframe;			  /**/
@@ -106,6 +106,7 @@ public:
 		float back_speed_limit = 0.f;			  /*後退速度(km/h)*/
 		float body_rad_limit = 0.f;			  /*旋回速度(度/秒)*/
 		float turret_rad_limit = 0.f;			  /*砲塔駆動速度(度/秒)*/
+		frames fps_view;//コックピット
 		//専門
 		std::array<int, 4> square{ 0 };//車輛の四辺
 		std::array<std::vector<frames>, 2> b2upsideframe; /*履帯上*/
@@ -148,6 +149,7 @@ public:
 			this->b2downsideframe	 = t.b2downsideframe;
 			this->burner		 = t.burner;
 			this->hook		 = t.hook;
+			this->fps_view = t.fps_view;
 		}
 		//事前読み込み
 		static void set_vehicles_pre(const char* name, std::vector<hit::Vehcs>* veh_, const bool& Async) {
@@ -253,6 +255,10 @@ public:
 								t.b2downsideframe[1].emplace_back(i + 1 + z, t.obj.frame(i + 1 + z));
 							}
 						}
+					}
+					else if (p.find("視点", 0) != std::string::npos) {
+						t.fps_view.first = i;
+						t.fps_view.second = t.obj.frame(t.fps_view.first);
 					}
 
 				}
@@ -476,6 +482,10 @@ public:
 					else if (p.find("フック", 0) != std::string::npos) {
 						t.hook.first = i;
 						t.hook.second = t.obj.frame(t.hook.first);
+					}
+					else if (p.find("視点", 0) != std::string::npos) {
+						t.fps_view.first = i;
+						t.fps_view.second = t.obj.frame(t.fps_view.first);
 					}
 				}
 				//メッシュ
