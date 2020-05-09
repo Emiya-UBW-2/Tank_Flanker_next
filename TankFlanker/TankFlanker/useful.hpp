@@ -10,15 +10,20 @@ using std::uint8_t;
 
 constexpr float M_GR = -9.8f;				  /*重力加速度*/
 
-inline const int deskx    = (GetSystemMetrics(SM_CXSCREEN));	/*デスクトップX*/
-inline const int desky    = (GetSystemMetrics(SM_CYSCREEN));	/*デスクトップY*/
-inline const int dispx    = deskx;				/*描画X*/
-inline const int dispy    = desky;				/*描画Y*/
-//inline const int dispx = 1080;					/*描画X*/
-//inline const int dispy = 1200;					/*描画Y*/
+inline const int deskx = (GetSystemMetrics(SM_CXSCREEN)); /*デスクトップX*/
+inline const int desky = (GetSystemMetrics(SM_CYSCREEN)); /*デスクトップY*/
+
+//inline const int dispx = 1080; /*描画X*/
+//inline const int dispy = 1200; /*描画Y*/
+
+inline const int dispx = 1080; /*描画X*/
+inline const int dispy = 1200; /*描画Y*/
+
+inline const int out_dispx = dispx * desky / dispy; /*ウィンドウX*/
+inline const int out_dispy = dispy * desky / dispy;// +256; /*ウィンドウY*/
 //リサイズ
-#define x_r(p1) (int(p1) * dispx / deskx)
-#define y_r(p1) (int(p1) * dispy / desky)
+#define x_r(p1) (int(p1) * out_dispx / deskx)
+#define y_r(p1) (int(p1) * out_dispy / desky)
 //マウス判定
 #define in2_(mx, my, x1, y1, x2, y2) (mx >= x1 && mx <= x2 && my >= y1 && my <= y2)
 #define in2_mouse(x1, y1, x2, y2) (in2_(mousex, mousey, x1, y1, x2, y2))

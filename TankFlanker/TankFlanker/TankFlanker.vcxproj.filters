@@ -59,5 +59,8 @@
     <ClInclude Include="map.hpp">
       <Filter>ソース ファイル</Filter>
     </ClInclude>
+    <ClInclude Include="VR.hpp">
+      <Filter>ソース ファイル</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -2,7 +2,7 @@
 // 
 // 		ＤＸライブラリ		Windows専用関数プロトタイプ宣言用ヘッダファイル
 // 
-// 				Ver 3.21d
+// 				Ver 3.21e
 // 
 // -------------------------------------------------------------------------------
 
@@ -38,7 +38,8 @@ extern	int			GetWindowMaxSizeFlag(			void ) ;												// メインウインドウが最
 extern	int			GetActiveFlag(					void ) ;												// GetWindowActiveFlag の別名関数
 extern	HWND		GetMainWindowHandle(			void ) ;												// メインウインドウのウインドウハンドルを取得する
 extern	int			GetWindowModeFlag(				void ) ;												// ウインドウモードで起動しているかどうかを取得する( 戻り値  TRUE:ウインドウモード  FALSE:フルスクリーンモード )
-extern	int			GetDefaultState(				int *SizeX, int *SizeY, int *ColorBitDepth, int *RefreshRate = NULL , int *LeftTopX = NULL , int *LeftTopY = NULL , int *PixelSizeX = NULL , int *PixelSizeY = NULL ) ;		// 起動時のデスクトップの画面情報を取得する( SizeX:デスクトップの横解像度を格納する変数のポインタ  SizeY:縦解像度を格納する変数のポインタ  ColorBitDepth:画面カラービット数を格納する変数のポインタ  RefreshRate:デスクトップのリフレッシュレートを格納する変数のポインタ  LeftTopX:デスクトップの左上Ｘ座標を格納する変数のポインタ  LeftTopY:デスクトップの左上Ｙ座標を格納する変数のポインタ  PixelSizeX:OSの拡大率設定の影響を受けないデスクトップの横解像度を格納する変数のポインタ  PixelSizeY:OSの拡大率設定の影響を受けないデスクトップの縦解像度を格納する変数のポインタ )
+extern	int			GetDefaultState(				int *SizeX, int *SizeY, int *ColorBitDepth, int *RefreshRate = NULL , int *LeftTopX = NULL , int *LeftTopY = NULL , int *PixelSizeX = NULL , int *PixelSizeY = NULL , int *XDpi = NULL , int *YDpi = NULL ) ;		// 起動時のデスクトップの画面情報を取得する( SizeX:デスクトップの横解像度を格納する変数のポインタ  SizeY:縦解像度を格納する変数のポインタ  ColorBitDepth:画面カラービット数を格納する変数のポインタ  RefreshRate:デスクトップのリフレッシュレートを格納する変数のポインタ  LeftTopX:デスクトップの左上Ｘ座標を格納する変数のポインタ  LeftTopY:デスクトップの左上Ｙ座標を格納する変数のポインタ  PixelSizeX:OSの拡大率設定の影響を受けないデスクトップの横解像度を格納する変数のポインタ  PixelSizeY:OSの拡大率設定の影響を受けないデスクトップの縦解像度を格納する変数のポインタ  XDpi:X軸のDPI  YDpi:Y軸のDPI )
+extern	int			GetMonitorDpi(					int *XDpi, int *YDpi, int MonitorIndex = -1 ) ;			// モニターのDPIを取得する
 extern	int			GetNoActiveState(				int ResetFlag = TRUE ) ;								// メインウインドウが非アクティブになり、処理が一時停止していたかどうかを取得する(引数 ResetFlag=TRUE:状態をリセット FALSE:状態をリセットしない    戻り値: 0=一時停止はしていない  1=一時停止していた )
 extern	int			GetMouseDispFlag(				void ) ;												// マウスポインタを表示するかどうかの設定を取得する( 戻り値  TRUE:表示する  FALSE:表示しない )
 extern	int			GetAlwaysRunFlag(				void ) ;												// メインウインドウが非アクティブになっても処理を実行し続けるかどうかの設定を取得する( TRUE:実行する  FALSE:停止する )
@@ -114,6 +115,7 @@ extern	int			SetUseBackBufferTransColorFlag(			int Flag ) ;																		// 
 extern	int			SetUseUpdateLayerdWindowFlag(			int Flag ) ;																		// UpdateLayerdWindowForBaseImage や UpdateLayerdWindowForSoftImage を使用するかどうかを設定する( TRUE:使用する  FALSE:使用しない )
 extern	int			SetResourceModule(						HMODULE ResourceModule ) ;															// リソースを読み込む際に使用するモジュールを設定する( NULL を指定すると初期状態に戻ります、デフォルトでは NULL )
 extern	int			SetUseDxLibWM_PAINTProcess(				int Flag ) ;																		// WM_PAINT メッセージが来た際に『ＤＸライブラリの WM_PAINTメッセージが来た際の処理』を行うかどうかを設定する( 別スレッドで描画処理を行う場合などで使用 )
+extern	int			SetWindows10_WM_CHAR_CancelTime(		int MilliSecond ) ;																	// Windows10 で WM_CHAR で短時間に連続して同じ文字が入力された場合の無効扱いにする時間を設定する( MilliSecond のミリ秒以内に連続して同じ文字が入力された場合に無効にする、MilliSecond の値をマイナスにするとデフォルトの設定に戻る )
 
 // ドラッグ＆ドロップされたファイル関係
 extern	int			SetDragFileValidFlag(		int Flag ) ;																	// ファイルのメインウインドウへのドラッグ＆ドロップ機能を有効にするかどうかのフラグをセットする

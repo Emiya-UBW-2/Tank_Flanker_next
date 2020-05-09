@@ -59,8 +59,8 @@ public:
 		ChangeWindowMode(TRUE);		       /*窓表示*/
 		SetUseDirect3DVersion(DX_DIRECT3D_11); /*directX ver*/
 		SetGraphMode(dispx, dispy, 32);	       /*解像度*/
-		//SetUseDirectInputFlag(TRUE);			       /**/
-		//SetWindowSizeChangeEnableFlag(FALSE, FALSE);	       /*ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする*/
+		SetUseDirectInputFlag(TRUE);			       /**/
+		SetWindowSizeChangeEnableFlag(FALSE, FALSE);	       /*ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする*/
 		SetUsePixelLighting(use_pixellighting ? TRUE : FALSE); /*ピクセルシェーダの使用*/
 		//SetFullSceneAntiAliasingMode(4, 2);		       /*アンチエイリアス*/
 		SetWaitVSyncFlag(use_vsync ? TRUE : FALSE);	       /*垂直同期*/
@@ -73,6 +73,8 @@ public:
 		SetWriteZBuffer3D(TRUE);			       /*zbufwrite*/
 		SetDrawMode(DX_DRAWMODE_BILINEAR);		       /**/
 
+		SetWindowSize(out_dispx, out_dispy);
+		SetWindowPosition(0, 0);
 		//エフェクト
 		{
 			size_t j = 0;
@@ -148,7 +150,7 @@ public:
 		*/
 		ScreenFlip();
 		if (!use_vsync) {
-			while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
+		//	while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
 		}
 		return true;
 	}

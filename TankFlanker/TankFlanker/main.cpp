@@ -2,6 +2,7 @@
 #include "UI.hpp"
 #include "HostPass.hpp"
 #include "map.hpp"
+#include "VR.hpp"
 
 
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd) {
@@ -17,6 +18,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		shadow_e = getparam_bool(mdata);
 		FileRead_close(mdata);
 	}
+	auto vrparts = std::make_unique<VRDraw>();	/*演算クラス*/
 	auto UIparts = std::make_unique<UI>();			      /*UI*/
 	auto Debugparts = std::make_unique<DeBuG>(90);		      /*デバッグ*/
 	auto Hostpassparts = std::make_unique<HostPassEffect>(dof_e, bloom_e); /*ホストパスエフェクト*/
@@ -28,6 +30,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	std::array<VECTOR_ref, veh_all> aimpos;			    //機体の狙い
 	VECTOR_ref aimposout;					    //UIに出力
 	GraphHandle BufScreen = GraphHandle::Make(dispx, dispy);    //描画スクリーン
+	GraphHandle outScreen = GraphHandle::Make(dispx, dispy);    //描画スクリーン
 	/*map*/
 	auto mapparts = std::make_unique<Mapclass>();
 	//空母
@@ -40,7 +43,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	MV1 hit_pic;      //弾痕
 	MV1 plane_effect; //飛行機エフェクト
 	//操作
-	float fov = deg2rad(90 / 2);
+	float fov = deg2rad(90);
 	bool ads = false;
 	int Rot = 0;
 	float ratio = 1.f;
@@ -67,8 +70,12 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	UIparts->load_window("車両モデル");					//ロード画面
 	hit::set_ammos(&Ammos);							//弾薬
 	hit::Vehcs::set_vehicles(&Vehicles);					//車輛
-	//ココから繰り返し読み込み//-------------------------------------------------------------------
 
+	vrparts->Set_Device();
+	VECTOR_ref HMDpos, HMDxvec, HMDyvec, HMDzvec;
+	bool HMDon;
+
+	//ココから繰り返し読み込み//-------------------------------------------------------------------
 	do{
 		//キャラ選択
 		chara.resize(1);
@@ -399,7 +406,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					}
 				}
 				c.changegear.first = true;
+				c.changegear.second = 2;
 				c.landing.first = false;
+				c.landing.second = 2;
 			}
 		}
 		//必要な時に当たり判定をリフレッシュする(仮)
@@ -438,7 +447,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				veh.obj.DrawModel();
 			}
 		};
-		auto draw_on_shadow = [&mapparts, &carrier, &chara, &ads, &tree, &campos] {
+		auto draw_on_shadow = [&mapparts, &carrier, &chara, &ads, &tree, &campos,&vrparts] {
 			//マップ
 			SetFogStartEnd(0.0f, 3000.f);
 			SetFogColor(128, 128, 128);
@@ -500,6 +509,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			}
 			SetUseLighting(TRUE);
 			SetFogEnable(TRUE);
+
+			vrparts->Draw_Player();
 		};
 		//通信開始
 		{
@@ -535,14 +546,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					}
 				}
 			}
-			if (CheckHitKey(KEY_INPUT_ESCAPE) != 0) {
-				break;
-			}
-
-			if (CheckHitKey(KEY_INPUT_O) != 0) {
-				break;
-			}
-
 			Debugparts->put_way();
 			//空母移動
 			{
@@ -676,7 +679,116 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					}
 				}
 				//キー
-				{
+				if (1) {
+					{
+						/*
+						mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);   //射撃
+						mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0); //マシンガン
+							//スロットル
+							mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
+							mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
+							//脚
+							mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
+							mine.key[11] = (CheckHitKey(KEY_INPUT_G) != 0);
+							//精密操作
+							mine.key[12] = (CheckHitKey(KEY_INPUT_LSHIFT) != 0);
+							//着艦フックスイッチ
+							mine.key[13] = (CheckHitKey(KEY_INPUT_X) != 0);
+							//カタパルト
+							mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
+						}
+						*/
+						//他モードへの移行
+						change_vehicle = std::clamp<uint8_t>(change_vehicle + 1, 0, int((CheckHitKey(KEY_INPUT_P) != 0) ? 2 : 0));
+						for (uint8_t i = 0; i < mine.vehicle.size(); i++) {
+							if (mine.mode != i) {
+								if (change_vehicle == 1) {
+									mine.mode = i;
+									eyevec = mine.vehicle[mine.mode].mat.zvec();
+									mine.vehicle[mine.mode].add = VGet(0.f, 0.f, 0.f);
+									change_vehicle = 2;
+								}
+							}
+						}
+					}
+					if (vrparts->get_left_hand_num() != -1) {
+						auto& ptr_LEFTHAND = (*vrparts->get_device())[vrparts->get_left_hand_num()];
+						auto& ptr_RIGHTHAND = (*vrparts->get_device())[vrparts->get_right_hand_num()];
+
+						if (mine.mode == 0) {
+
+						}
+						if (mine.mode == 1) {
+							if (ptr_LEFTHAND.turn && ptr_LEFTHAND.now) {
+								mine.key[0] = false;
+								mine.key[1] = false;
+								mine.key[2] = false;
+								mine.key[3] = false;
+								mine.key[4] = false;
+								mine.key[5] = false;
+								mine.key[6] = false;
+								mine.key[7] = false;
+								mine.key[11] = false;
+								mine.key[12] = false;
+								//ピッチ
+								if (ptr_LEFTHAND.yvec.y() > sin(deg2rad(20))) {
+									mine.key[2] = true;
+								}
+								if (ptr_LEFTHAND.yvec.y() < sin(deg2rad(-20))) {
+									mine.key[3] = true;
+								}
+								//ロール
+								if (ptr_LEFTHAND.zvec.x() > sin(deg2rad(20))) {
+									mine.key[4] = true;
+								}
+								if (ptr_LEFTHAND.zvec.x() < sin(deg2rad(-20))) {
+									mine.key[5] = true;
+								}
+								//ヨー
+								//if (camp.get(((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Trigger)) != 0), ptr_LEFTHAND.touch)) {
+								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
+									if (ptr_LEFTHAND.touch.x() < -0.5f) {
+										mine.key[6] = true;
+									}
+
+									if (ptr_LEFTHAND.touch.x() > 0.5f) {
+										mine.key[7] = true;
+									}
+								}
+								//ブレーキ
+								if ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
+									mine.key[11] = true;
+								}
+								//
+								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_A)) != 0) {
+									//精密操作
+									mine.key[12] = true;
+								}
+
+								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_B)) != 0) {
+									//サブ
+									mine.key[1] = true;
+								}
+								if ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Trigger)) != 0) {
+									//メイン
+									mine.key[0] = true;
+								}
+
+							}
+							//スロットル
+							mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
+							mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
+							//脚
+							mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
+							//着艦フックスイッチ
+							mine.key[13] = (CheckHitKey(KEY_INPUT_X) != 0);
+							//カタパルト
+							mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
+						}
+					}
+
+				}
+				else {
 					mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);   //射撃
 					mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0); //マシンガン
 					mine.key[2] = (CheckHitKey(KEY_INPUT_W) != 0);
@@ -714,8 +826,36 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 						}
 					}
 				}
+
 				//マウスと視点角度をリンク
-				{
+				if (1) {
+					SetMousePoint(dispx / 2, dispy / 2);
+
+					if (vrparts->get_hmd_num() != -1) {
+						auto& ptr_HMD = (*vrparts->get_device())[vrparts->get_hmd_num()];
+						HMDpos = ptr_HMD.pos;
+						HMDxvec = ptr_HMD.xvec;
+						HMDyvec = ptr_HMD.yvec;
+						HMDzvec = ptr_HMD.zvec;
+						HMDon = ptr_HMD.now;
+					}
+					else {
+						HMDpos = VGet(0, 0, 0);
+						HMDxvec = VGet(1, 0, 0);
+						HMDyvec = VGet(0, 1, 0);
+						HMDzvec = VGet(0, 0, 1);
+						HMDon = false;
+					}
+					eye_pos_ads = HMDyvec * -0.5f + VGet(HMDpos.x()*-1.f, HMDpos.y(), HMDpos.z()*-1.f);
+					eye_pos_ads = VGet(
+						std::clamp(eye_pos_ads.x(), -0.18f, 0.18f),
+						std::clamp(eye_pos_ads.y(), 0.f, 0.8f),
+						std::clamp(eye_pos_ads.z(), -0.18f, 0.1f)
+
+					);
+					eyevec = VGet(HMDzvec.x(), HMDzvec.y()*-1.f, HMDzvec.z());
+				}
+				else {
 					int mousex, mousey;
 					GetMousePoint(&mousex, &mousey);
 					SetMousePoint(dispx / 2, dispy / 2);
@@ -915,10 +1055,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					veh.wheel_Left -= veh.speed * 2.f - veh.yradadd * 5.f;
 					veh.wheel_Right -= veh.speed * 2.f + veh.yradadd * 5.f;
 				}
-
+				//飛行機演算
 				{
 					auto& veh = c.vehicle[1];
-					//飛行機
 					float rad_spec = deg2rad(veh.use_veh.body_rad_limit * (veh.use_veh.mid_speed_limit / veh.speed));
 					if (veh.speed < veh.use_veh.min_speed_limit) {
 						rad_spec = deg2rad(veh.use_veh.body_rad_limit * (std::clamp(veh.speed, 0.f, veh.use_veh.min_speed_limit) / veh.use_veh.min_speed_limit));
@@ -1240,10 +1379,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				{
 					//転輪
 					auto& veh = c.vehicle[0];
-					b2Vec2 tmpb2 = b2Vec2(
-						(M_GR / fps) * (veh.mat.zvec().dot(VGet(0, 1.f, 0))),
-						(M_GR / fps) * (veh.mat.yvec().dot(VGet(0, 1.f, 0)))
-					);
+					b2Vec2 tmpb2 = b2Vec2( (M_GR / fps) * (veh.mat.zvec().dot(VGet(0, 1.f, 0))), (M_GR / fps) * (veh.mat.yvec().dot(VGet(0, 1.f, 0))) );
 					int z = 0;
 					for (auto& f : c.foot) {
 						size_t i = 0;
@@ -1544,8 +1680,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			}
 			//モデルに反映
 			for (auto& c : chara) {
-				c.vehicle[0].obj.SetMatrix(c.vehicle[0].mat * MATRIX_ref::Mtrans(c.vehicle[0].pos));
-				c.vehicle[1].obj.SetMatrix(c.vehicle[1].mat * MATRIX_ref::Mtrans(c.vehicle[1].pos));
+				for (auto& veh : c.vehicle) {
+					veh.obj.SetMatrix(veh.mat * MATRIX_ref::Mtrans(veh.pos));
+				}
 				for (auto& be : c.p_burner) {
 					be.effectobj.SetMatrix(MATRIX_ref::Scale(VGet(1.f, 1.f, std::clamp(c.vehicle[1].speed / c.vehicle[1].use_veh.mid_speed_limit, 0.1f, 1.f))) * MATRIX_ref::Mtrans(be.frame.second) * c.vehicle[1].mat * MATRIX_ref::Mtrans(c.vehicle[1].pos));
 				}
@@ -1559,75 +1696,72 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				case 1:
 					Drawparts->Ready_Shadow(campos, draw_in_shadow_sky, VGet(500.f, 500.f, 500.f));
 					break;
-				default:
-					break;
 				}
 			}
+			vrparts->Move_Player();
 			{
-				if (ads) {
-					if (mine.mode == 0) {
-						campos = mine.vehicle[0].obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame1.first) + MATRIX_ref::Vtrans(mine.vehicle[0].Gun_[0].gun_info.frame2.second, MATRIX_ref::RotY(atan2f(eyevec.x(), eyevec.z())));
+				auto& veh = mine.vehicle[mine.mode];
+				switch (mine.mode) {
+				case 0:
+					{
+					eyevec = MATRIX_ref::Vtrans(eyevec, veh.mat);
+					if (ads) {
+						campos = veh.obj.frame(veh.Gun_[0].gun_info.frame1.first) + MATRIX_ref::Vtrans(veh.Gun_[0].gun_info.frame2.second, MATRIX_ref::RotY(atan2f(eyevec.x(), eyevec.z())));
 						camvec = campos - eyevec;
-						camup = mine.vehicle[0].mat.yvec();
+						camup = veh.mat.yvec();
 					}
-					if (mine.mode == 1) {
-						if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
-							camvec = mine.vehicle[1].obj.frame(mine.vehicle[1].use_veh.fps_view.first) + (mine.vehicle[1].mat.yvec()*0.58f);
+					else {
+						{
+							camvec = veh.pos + VGet(0.f, 3.f, 0.f);
 							camvec.y(std::max(camvec.y(), 5.f));
-							eyevec = (camvec - aimpos[1]).Norm();
-							campos = camvec;
-							camvec = camvec - eyevec;
-							camup = mine.vehicle[1].mat.yvec();
-							eyevec = VGet(0.f, 0.f, 1.f);
 						}
-						else {
-							camvec = mine.vehicle[1].obj.frame(mine.vehicle[1].use_veh.fps_view.first) + MATRIX_ref::Vtrans(eye_pos_ads, mine.vehicle[1].mat);
-							camvec.y(std::max(camvec.y(), 5.f));
-							campos = camvec;
-							camvec = camvec - MATRIX_ref::Vtrans(eyevec, mine.vehicle[1].mat);
-							camup = mine.vehicle[1].mat.yvec();
+						{
+							campos = camvec + eyevec * (range);
+							campos.y(std::max(campos.y(), 0.f));
+							if (mapparts->map_col_line_nearest(camvec, &campos)) {
+								campos = camvec + (campos - camvec) * (0.9f);
+							}
+							{
+								auto hp = carrier_col.CollCheck_Line(camvec, campos, 0, 0);
+								if (hp.HitFlag == TRUE) {
+									campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
+								}
+							}
+						}
+						{
+							camup = VGet(0.f, 1.f, 0.f);
+							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(veh.mat.xvec(), mine.xrad_shot));
+							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(veh.mat.zvec(), mine.zrad_shot));
+							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(veh.mat.xvec(), mine.zrad_shot));
+							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(veh.mat.zvec(), mine.xrad_shot));
 						}
 					}
 				}
-				else {
-					if (mine.mode == 0) {
-						{
-							camvec = mine.vehicle[0].pos + VGet(0.f, 3.f, 0.f);
-							camvec.y(std::max(camvec.y(), 5.f));
-						}
-						{
-							campos = camvec + eyevec * (range);
-							campos.y(std::max(campos.y(), 0.f));
-							if (mapparts->map_col_line_nearest(camvec, &campos)) {
-								campos = camvec + (campos - camvec) * (0.9f);
-							}
-							{
-								auto hp = carrier_col.CollCheck_Line(camvec, campos, 0, 0);
-								if (hp.HitFlag == TRUE) {
-									campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
-								}
-							}
-						}
-						{
-							camup = VGet(0.f, 1.f, 0.f);
-							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(mine.vehicle[0].mat.xvec(), mine.xrad_shot));
-							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(mine.vehicle[0].mat.zvec(), mine.zrad_shot));
-							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(mine.vehicle[0].mat.xvec(), mine.zrad_shot));
-							camup = MATRIX_ref::Vtrans(camup, MATRIX_ref::RotAxis(mine.vehicle[0].mat.zvec(), mine.xrad_shot));
-						}
-					}
-					if (mine.mode == 1) {
-						camvec = mine.vehicle[1].pos + mine.vehicle[1].mat.yvec() * (6.f);
-						camvec.y(std::max(camvec.y(), 5.f));
-
-						if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
-							eyevec = (camvec - aimpos[1]).Norm();
-							campos = camvec + eyevec * (range);
-							camup = mine.vehicle[1].mat.yvec();
-
+					break;
+				case 1:
+					{
+					if (ads) {
+						campos = veh.obj.frame(veh.use_veh.fps_view.first) + MATRIX_ref::Vtrans(eye_pos_ads, veh.mat);
+						campos.y(std::max(campos.y(), 5.f));
+						if (1) {
+							camvec = campos - MATRIX_ref::Vtrans(eyevec, veh.mat);
 						}
 						else {
-							campos = camvec + eyevec * (range);
+							if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
+								eyevec = veh.mat.zvec();
+								camvec = campos - eyevec;
+							}
+							else {
+								camvec = campos - MATRIX_ref::Vtrans(eyevec, veh.mat);
+							}
+						}
+						camup = veh.mat.yvec();
+					}
+					else {
+						camvec = veh.pos + veh.mat.yvec() * (6.f);
+						camvec.y(std::max(camvec.y(), 5.f));
+						if (1) {
+							campos = camvec + MATRIX_ref::Vtrans(eyevec, veh.mat) * (range);
 							campos.y(std::max(campos.y(), 0.f));
 							if (mapparts->map_col_line_nearest(camvec, &campos)) {
 								campos = camvec + (campos - camvec) * (0.9f);
@@ -1638,60 +1772,77 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 									campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
 								}
 							}
-							camup = VGet(0.f, 1.f, 0.f);
+							camup = veh.mat.yvec();
 						}
+						else {
+							if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
+								eyevec = (camvec - aimpos[1]).Norm();
+								campos = camvec + eyevec * (range);
+								camup = veh.mat.yvec();
+
+							}
+							else {
+								campos = camvec + eyevec * (range);
+								campos.y(std::max(campos.y(), 0.f));
+								if (mapparts->map_col_line_nearest(camvec, &campos)) {
+									campos = camvec + (campos - camvec) * (0.9f);
+								}
+								{
+									auto hp = carrier_col.CollCheck_Line(camvec, campos, 0, 0);
+									if (hp.HitFlag == TRUE) {
+										campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
+									}
+								}
+								camup = VGet(0.f, 1.f, 0.f);
+							}
+						}
+
 					}
+				}
+					break;
 				}
 			}
 			{
 				float fardist = 1.f;
 				float neardist = 1.f;
-				{
-					switch (mine.mode) {
-					case 0: 
+				switch (mine.mode) {
+				case 0:
 					{
-						VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (1000.f);
+					VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (1000.f);
+
+					mapparts->map_col_line_nearest(campos, &aimingpos);
+					auto hp = carrier_col.CollCheck_Line(campos, aimingpos, 0, 0);
+					if (hp.HitFlag == TRUE) {
+						aimingpos = hp.HitPosition;
+					}
+					fardist = std::clamp((campos - aimingpos).size(), 300.f, 1000.f);
+				}
+					break;
+				case 1:
+					{
+					if (ads) {
+						VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (3000.f);
 
 						mapparts->map_col_line_nearest(campos, &aimingpos);
 						auto hp = carrier_col.CollCheck_Line(campos, aimingpos, 0, 0);
 						if (hp.HitFlag == TRUE) {
 							aimingpos = hp.HitPosition;
 						}
-						fardist = std::clamp((campos - aimingpos).size(), 300.f, 1000.f);
+						fardist = std::clamp((campos - aimingpos).size(), 300.f, 3000.f);
 					}
-						break;
-					case 1:
-					{
-						if (ads) {
-							VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (3000.f);
-
-							mapparts->map_col_line_nearest(campos, &aimingpos);
-							auto hp = carrier_col.CollCheck_Line(campos, aimingpos, 0, 0);
-							if (hp.HitFlag == TRUE) {
-								aimingpos = hp.HitPosition;
-							}
-							fardist = std::clamp((campos - aimingpos).size(), 300.f, 3000.f);
-						}
-						else {
-							fardist = 6000.f;
-						}
-					}
-						break;
-					default:
-						break;
+					else {
+						fardist = 6000.f;
 					}
 				}
-				{
-					switch (mine.mode) {
-					case 0:
-						neardist = (ads ? (1.5f + 98.5f * (fardist - 300.f) / (1000.f - 300.f)) : 1.5f);
-						break;
-					case 1:
-						neardist = (ads ? (5.f + 25.f * (fardist - 300.f) / (3000.f - 300.f)) : range_p - 5.f);
-						break;
-					default:
-						break;
-					}
+					break;
+				}
+				switch (mine.mode) {
+				case 0:
+					neardist = (ads ? (1.5f + 98.5f * (fardist - 300.f) / (1000.f - 300.f)) : 1.5f);
+					break;
+				case 1:
+					neardist = (ads ? (5.f + 25.f * (fardist - 300.f) / (3000.f - 300.f)) : range_p - 5.f);
+					break;
 				}
 				//被写体深度描画
 				if(shadow_e){
@@ -1701,6 +1852,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					Hostpassparts->dof(&BufScreen, mapparts->sky_draw(campos, camvec, camup, fov / ratio), draw_on_shadow, campos, camvec, camup, fov / ratio, fardist, neardist);
 				}
 			}
+
+			//VECTOR_ref eyepos = vrparts->SetEyePositionVR(0);
 			//
 			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 0.01f, 5000.0f, fov / ratio, campos, camvec, camup);
 			//照準座標取得
@@ -1708,8 +1861,8 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				VECTOR_ref startpos, endpos;
 				switch (mine.mode) {
 				case 0: //戦車
-					startpos = mine.vehicle[0].obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame2.first);
-					endpos = startpos + (mine.vehicle[0].obj.frame(mine.vehicle[0].Gun_[0].gun_info.frame3.first) - startpos).Norm() * (1000.f);
+					startpos = mine.vehicle[mine.mode].obj.frame(mine.vehicle[mine.mode].Gun_[0].gun_info.frame2.first);
+					endpos = startpos + (mine.vehicle[mine.mode].obj.frame(mine.vehicle[mine.mode].Gun_[0].gun_info.frame3.first) - startpos).Norm() * (1000.f);
 					break;
 				case 1:
 					startpos = mine.vehicle[1].pos;
@@ -1749,73 +1902,101 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				distance = (chara[tgt].vehicle[0].obj.frame(chara[tgt].vehicle[0].use_veh.gunframe[0].frame1.first) - campos).size();
 			}
 			//描画
+			outScreen.SetDraw_Screen();
 			{
-
 				//背景
 				BufScreen.DrawGraph(0, 0, false);
 				//ブルーム
 				Hostpassparts->bloom(BufScreen, (mine.mode == 0) ? 64 : (255));
 				//UI
 				UIparts->draw(aimposout, mine, ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads);
+			}
+			//VRに移す
+			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
+			{
+				outScreen.DrawGraph(0, 0, false);
+				for (char i = 0; i < 2; i++) {
+					vrparts->PutEye((ID3D11Texture2D*)GetUseDirect3D11BackBufferTexture2D(), i);
+				}
+			}
+			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
+			{
+				SetWindowSize(out_dispx, out_dispy);
+				outScreen.DrawExtendGraph(0, 0, out_dispx, out_dispy, false);
 				//デバッグ
 				Debugparts->end_way();
 				Debugparts->debug(10, 10, fps, float(GetNowHiPerformanceCount() - waits) / 1000.f);
 			}
-			//VRに移す
 			{
-				//
-			}
+				auto& ptr_LEFTHAND = (*vrparts->get_device())[vrparts->get_left_hand_num()];
+				{
+					DrawFormatString(0, 300, GetColor(255, 255, 255), "%d", ptr_LEFTHAND.on[1]);
 
+					int i = 18;
+					DrawFormatString(0, 300 + i, GetColor(255, 255, 255), "%d", vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_A)); i += 18;
+					DrawFormatString(0, 300 + i, GetColor(255, 255, 255), "%d", vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_B)); i += 18;
+				}
+			}
 			Drawparts->Screen_Flip(waits);
+			vrparts->Eye_Flip(waits);//フレーム開始の数ミリ秒前にstartするまでブロックし、レンダリングを開始する直前に呼び出す必要があります。
+
+			if (CheckHitKey(KEY_INPUT_ESCAPE) != 0) {
+				break;
+			}
+			if (CheckHitKey(KEY_INPUT_O) != 0) {
+				break;
+			}
 		}
 		SetMouseDispFlag(TRUE);
 		SetMousePoint(dispx / 2, dispy / 2);
 
 		//解放
-		for (auto& c : chara) {
-			/*エフェクト*/
-			for (auto& t : c.effcs_gun) {
-				t.first.handle.Dispose();
-			}
-			for (auto& t : c.effcs_missile) {
-				t.first.handle.Dispose();
-			}
-			for (auto& t : c.effcs) {
-				t.handle.Dispose();
-			}
-			/*Box2D*/
-			delete c.b2mine.playerfix->GetUserData();
-			c.b2mine.playerfix->SetUserData(NULL);
-			for (auto& t : c.foot) {
-				for (auto& f : t.Foot) {
-					delete f.playerfix->GetUserData();
-					f.playerfix->SetUserData(NULL);
+		{
+			for (auto& c : chara) {
+				/*エフェクト*/
+				for (auto& t : c.effcs_gun) {
+					t.first.handle.Dispose();
 				}
-				for (auto& f : t.Wheel) {
-					delete f.playerfix->GetUserData();
-					f.playerfix->SetUserData(NULL);
+				for (auto& t : c.effcs_missile) {
+					t.first.handle.Dispose();
 				}
-				for (auto& f : t.Yudo) {
-					delete f.playerfix->GetUserData();
-					f.playerfix->SetUserData(NULL);
+				for (auto& t : c.effcs) {
+					t.handle.Dispose();
 				}
-			}
+				/*Box2D*/
+				delete c.b2mine.playerfix->GetUserData();
+				c.b2mine.playerfix->SetUserData(NULL);
+				for (auto& t : c.foot) {
+					for (auto& f : t.Foot) {
+						delete f.playerfix->GetUserData();
+						f.playerfix->SetUserData(NULL);
+					}
+					for (auto& f : t.Wheel) {
+						delete f.playerfix->GetUserData();
+						f.playerfix->SetUserData(NULL);
+					}
+					for (auto& f : t.Yudo) {
+						delete f.playerfix->GetUserData();
+						f.playerfix->SetUserData(NULL);
+					}
+				}
 
-			for (auto& veh : c.vehicle) {
-				for (auto& t : veh.use_veh.wheelframe) {
-					t.gndsmkeffcs.handle.Dispose();
+				for (auto& veh : c.vehicle) {
+					for (auto& t : veh.use_veh.wheelframe) {
+						t.gndsmkeffcs.handle.Dispose();
+					}
+					veh.reset();
 				}
-				veh.reset();
 			}
-		}
-		chara.clear();
-		carrier.Dispose();
-		carrier_col.Dispose();
-		mapparts->delete_map(&wall, &tree);
-		wire.clear();
-		catapult.clear();
-		if (shadow_e) {
-			Drawparts->Delete_Shadow();
+			chara.clear();
+			carrier.Dispose();
+			carrier_col.Dispose();
+			mapparts->delete_map(&wall, &tree);
+			wire.clear();
+			catapult.clear();
+			if (shadow_e) {
+				Drawparts->Delete_Shadow();
+			}
 		}
 		//
 	}while (ProcessMessage() == 0 && CheckHitKey(KEY_INPUT_ESCAPE) == 0);
