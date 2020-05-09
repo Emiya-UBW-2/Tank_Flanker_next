@@ -8,9 +8,7 @@
 #include <memory>
 
 class VRDraw {
-private:
-	vr::IVRSystem* m_pHMD;
-	vr::EVRInitError eError;
+public:
 	struct systems {
 		int id = 0;
 		VECTOR_ref pos = VGet(0, 0, 0);
@@ -24,6 +22,9 @@ private:
 		vr::ETrackedDeviceClass type = vr::TrackedDeviceClass_Invalid;
 		bool turn = false, now = false;
 	};
+private:
+	vr::IVRSystem* m_pHMD;
+	vr::EVRInitError eError;
 	std::vector<systems> ctrl;							/*HMD,controller*/
 	float fov = 90.f;
 	char deviceall = 0;

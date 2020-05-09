@@ -19,8 +19,8 @@ inline const int desky = (GetSystemMetrics(SM_CYSCREEN)); /*デスクトップY*
 inline const int dispx = 1080; /*描画X*/
 inline const int dispy = 1200; /*描画Y*/
 
-inline const int out_dispx = dispx * desky / dispy; /*ウィンドウX*/
-inline const int out_dispy = dispy * desky / dispy;// +256; /*ウィンドウY*/
+inline const int out_dispx = dispx * 960 / dispy; /*ウィンドウX*/
+inline const int out_dispy = dispy * 960 / dispy;// +256; /*ウィンドウY*/
 //リサイズ
 #define x_r(p1) (int(p1) * out_dispx / deskx)
 #define y_r(p1) (int(p1) * out_dispy / desky)

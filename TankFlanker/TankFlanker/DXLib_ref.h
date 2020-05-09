@@ -74,7 +74,7 @@ public:
 		SetDrawMode(DX_DRAWMODE_BILINEAR);		       /**/
 
 		SetWindowSize(out_dispx, out_dispy);
-		SetWindowPosition(0, 0);
+		SetWindowPosition((deskx- out_dispx)/2, 0);
 		//エフェクト
 		{
 			size_t j = 0;

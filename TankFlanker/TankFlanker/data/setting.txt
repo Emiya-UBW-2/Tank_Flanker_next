@@ -1,3 +1,4 @@
 hostpass=true
 bloom=true
 shadow=true
+usevr=false

@@ -11,14 +11,20 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	bool dof_e = false;
 	bool bloom_e = false;
 	bool shadow_e = false;
+	bool useVR_e = false;
 	{
 		int mdata = FileRead_open("data/setting.txt", FALSE);
 		dof_e = getparam_bool(mdata);
 		bloom_e = getparam_bool(mdata);
 		shadow_e = getparam_bool(mdata);
+		useVR_e = getparam_bool(mdata);
 		FileRead_close(mdata);
 	}
-	auto vrparts = std::make_unique<VRDraw>();	/*演算クラス*/
+	std::unique_ptr<VRDraw, std::default_delete<VRDraw>> vrparts;
+
+	if (useVR_e) {
+		vrparts = std::make_unique<VRDraw>();	/*演算クラス*/
+	}
 	auto UIparts = std::make_unique<UI>();			      /*UI*/
 	auto Debugparts = std::make_unique<DeBuG>(90);		      /*デバッグ*/
 	auto Hostpassparts = std::make_unique<HostPassEffect>(dof_e, bloom_e); /*ホストパスエフェクト*/
@@ -43,7 +49,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	MV1 hit_pic;      //弾痕
 	MV1 plane_effect; //飛行機エフェクト
 	//操作
-	float fov = deg2rad(90);
+	float fov = deg2rad(useVR_e ? 90 : 45);
 	bool ads = false;
 	int Rot = 0;
 	float ratio = 1.f;
@@ -70,8 +76,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	UIparts->load_window("車両モデル");					//ロード画面
 	hit::set_ammos(&Ammos);							//弾薬
 	hit::Vehcs::set_vehicles(&Vehicles);					//車輛
-
-	vrparts->Set_Device();
+	if (useVR_e) {
+		vrparts->Set_Device();
+	}
 	VECTOR_ref HMDpos, HMDxvec, HMDyvec, HMDzvec;
 	bool HMDon;
 
@@ -447,7 +454,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				veh.obj.DrawModel();
 			}
 		};
-		auto draw_on_shadow = [&mapparts, &carrier, &chara, &ads, &tree, &campos,&vrparts] {
+		auto draw_on_shadow = [&mapparts, &carrier, &chara, &ads, &tree, &campos,&vrparts,&useVR_e] {
 			//マップ
 			SetFogStartEnd(0.0f, 3000.f);
 			SetFogColor(128, 128, 128);
@@ -509,8 +516,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			}
 			SetUseLighting(TRUE);
 			SetFogEnable(TRUE);
-
-			vrparts->Draw_Player();
+			if (useVR_e) {
+				vrparts->Draw_Player();
+			}
 		};
 		//通信開始
 		{
@@ -679,11 +687,20 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					}
 				}
 				//キー
-				if (1) {
+				{
+					//通常、VR共通
 					{
-						/*
 						mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);   //射撃
 						mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0); //マシンガン
+						mine.key[2] = (CheckHitKey(KEY_INPUT_W) != 0);
+						mine.key[3] = (CheckHitKey(KEY_INPUT_S) != 0);
+						mine.key[4] = (CheckHitKey(KEY_INPUT_D) != 0);
+						mine.key[5] = (CheckHitKey(KEY_INPUT_A) != 0);
+						//飛行時のみの操作
+						if (mine.mode == 1) {
+							//ヨー
+							mine.key[6] = (CheckHitKey(KEY_INPUT_Q) != 0);
+							mine.key[7] = (CheckHitKey(KEY_INPUT_E) != 0);
 							//スロットル
 							mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
 							mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
@@ -697,8 +714,58 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 							//カタパルト
 							mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
 						}
-						*/
-						//他モードへの移行
+					}
+					if (useVR_e) {
+						if (vrparts->get_left_hand_num() != -1) {
+							auto& ptr_LEFTHAND = (*vrparts->get_device())[vrparts->get_left_hand_num()];
+							auto& ptr_RIGHTHAND = (*vrparts->get_device())[vrparts->get_right_hand_num()];
+							if (mine.mode == 0) {
+								if (ptr_LEFTHAND.turn && ptr_LEFTHAND.now) {
+								}
+							}
+							if (mine.mode == 1) {
+								if (ptr_LEFTHAND.turn && ptr_LEFTHAND.now) {
+									//メイン
+									mine.key[0] |= ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Trigger)) != 0);
+									//サブ
+									mine.key[1] |= ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_B)) != 0);
+									//ピッチ
+									mine.key[2] |= (ptr_LEFTHAND.yvec.y() > sin(deg2rad(20)));
+									mine.key[3] |= (ptr_LEFTHAND.yvec.y() < sin(deg2rad(-20)));
+									//ロール
+									mine.key[4] |= (ptr_LEFTHAND.zvec.x() > sin(deg2rad(20)));
+									mine.key[5] |= (ptr_LEFTHAND.zvec.x() < sin(deg2rad(-20)));
+									if ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
+										//ヨー
+										mine.key[6] |= (ptr_LEFTHAND.touch.x() > 0.5f);
+										mine.key[7] |= (ptr_LEFTHAND.touch.x() < -0.5f);
+										//スロットル
+										mine.key[8] |= (ptr_LEFTHAND.touch.y() > 0.5f);
+										mine.key[9] |= (ptr_LEFTHAND.touch.y() < -0.5f);
+										//ブレーキ
+										if (
+											(ptr_LEFTHAND.touch.x() >= -0.5f) &&
+											(ptr_LEFTHAND.touch.x() <= 0.5f) &&
+											(ptr_LEFTHAND.touch.y() >= -0.5f) &&
+											(ptr_LEFTHAND.touch.y() <= 0.5f)
+											) {
+											mine.key[11] |= true;
+										}
+									}
+									//脚
+
+									//精密操作
+									mine.key[12] |= ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_A)) != 0);
+									//着艦フックスイッチ
+
+									//カタパルト
+
+								}
+							}
+						}
+					}
+					//他モードへの移行
+					{
 						change_vehicle = std::clamp<uint8_t>(change_vehicle + 1, 0, int((CheckHitKey(KEY_INPUT_P) != 0) ? 2 : 0));
 						for (uint8_t i = 0; i < mine.vehicle.size(); i++) {
 							if (mine.mode != i) {
@@ -711,126 +778,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 							}
 						}
 					}
-					if (vrparts->get_left_hand_num() != -1) {
-						auto& ptr_LEFTHAND = (*vrparts->get_device())[vrparts->get_left_hand_num()];
-						auto& ptr_RIGHTHAND = (*vrparts->get_device())[vrparts->get_right_hand_num()];
-
-						if (mine.mode == 0) {
-
-						}
-						if (mine.mode == 1) {
-							if (ptr_LEFTHAND.turn && ptr_LEFTHAND.now) {
-								mine.key[0] = false;
-								mine.key[1] = false;
-								mine.key[2] = false;
-								mine.key[3] = false;
-								mine.key[4] = false;
-								mine.key[5] = false;
-								mine.key[6] = false;
-								mine.key[7] = false;
-								mine.key[11] = false;
-								mine.key[12] = false;
-								//ピッチ
-								if (ptr_LEFTHAND.yvec.y() > sin(deg2rad(20))) {
-									mine.key[2] = true;
-								}
-								if (ptr_LEFTHAND.yvec.y() < sin(deg2rad(-20))) {
-									mine.key[3] = true;
-								}
-								//ロール
-								if (ptr_LEFTHAND.zvec.x() > sin(deg2rad(20))) {
-									mine.key[4] = true;
-								}
-								if (ptr_LEFTHAND.zvec.x() < sin(deg2rad(-20))) {
-									mine.key[5] = true;
-								}
-								//ヨー
-								//if (camp.get(((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Trigger)) != 0), ptr_LEFTHAND.touch)) {
-								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
-									if (ptr_LEFTHAND.touch.x() < -0.5f) {
-										mine.key[6] = true;
-									}
-
-									if (ptr_LEFTHAND.touch.x() > 0.5f) {
-										mine.key[7] = true;
-									}
-								}
-								//ブレーキ
-								if ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
-									mine.key[11] = true;
-								}
-								//
-								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_A)) != 0) {
-									//精密操作
-									mine.key[12] = true;
-								}
-
-								if ((ptr_LEFTHAND.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_B)) != 0) {
-									//サブ
-									mine.key[1] = true;
-								}
-								if ((ptr_LEFTHAND.on[0] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Trigger)) != 0) {
-									//メイン
-									mine.key[0] = true;
-								}
-
-							}
-							//スロットル
-							mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
-							mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
-							//脚
-							mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
-							//着艦フックスイッチ
-							mine.key[13] = (CheckHitKey(KEY_INPUT_X) != 0);
-							//カタパルト
-							mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
-						}
-					}
-
-				}
-				else {
-					mine.key[0] = ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0);   //射撃
-					mine.key[1] = ((GetMouseInput() & MOUSE_INPUT_MIDDLE) != 0); //マシンガン
-					mine.key[2] = (CheckHitKey(KEY_INPUT_W) != 0);
-					mine.key[3] = (CheckHitKey(KEY_INPUT_S) != 0);
-					mine.key[4] = (CheckHitKey(KEY_INPUT_D) != 0);
-					mine.key[5] = (CheckHitKey(KEY_INPUT_A) != 0);
-					//飛行時のみの操作
-					if (mine.mode == 1) {
-						//ヨー
-						mine.key[6] = (CheckHitKey(KEY_INPUT_Q) != 0);
-						mine.key[7] = (CheckHitKey(KEY_INPUT_E) != 0);
-						//スロットル
-						mine.key[8] = (CheckHitKey(KEY_INPUT_R) != 0);
-						mine.key[9] = (CheckHitKey(KEY_INPUT_F) != 0);
-						//脚
-						mine.key[10] = (CheckHitKey(KEY_INPUT_C) != 0);
-						mine.key[11] = (CheckHitKey(KEY_INPUT_G) != 0);
-						//精密操作
-						mine.key[12] = (CheckHitKey(KEY_INPUT_LSHIFT) != 0);
-						//着艦フックスイッチ
-						mine.key[13] = (CheckHitKey(KEY_INPUT_X) != 0);
-						//カタパルト
-						mine.key[14] = (CheckHitKey(KEY_INPUT_SPACE) != 0);
-					}
-					//他モードへの移行
-					change_vehicle = std::clamp<uint8_t>(change_vehicle + 1, 0, int((CheckHitKey(KEY_INPUT_P) != 0) ? 2 : 0));
-					for (uint8_t i = 0; i < mine.vehicle.size(); i++) {
-						if (mine.mode != i) {
-							if (change_vehicle == 1) {
-								mine.mode = i;
-								eyevec = mine.vehicle[mine.mode].mat.zvec();
-								mine.vehicle[mine.mode].add = VGet(0.f, 0.f, 0.f);
-								change_vehicle = 2;
-							}
-						}
-					}
 				}
 
 				//マウスと視点角度をリンク
-				if (1) {
+				if (useVR_e) {
 					SetMousePoint(dispx / 2, dispy / 2);
-
 					if (vrparts->get_hmd_num() != -1) {
 						auto& ptr_HMD = (*vrparts->get_device())[vrparts->get_hmd_num()];
 						HMDpos = ptr_HMD.pos;
@@ -1698,13 +1650,17 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					break;
 				}
 			}
-			vrparts->Move_Player();
+			if (useVR_e) {
+				vrparts->Move_Player();
+			}
 			{
 				auto& veh = mine.vehicle[mine.mode];
 				switch (mine.mode) {
 				case 0:
 					{
-					eyevec = MATRIX_ref::Vtrans(eyevec, veh.mat);
+					if (useVR_e) {
+						eyevec = MATRIX_ref::Vtrans(eyevec, veh.mat);
+					}
 					if (ads) {
 						campos = veh.obj.frame(veh.Gun_[0].gun_info.frame1.first) + MATRIX_ref::Vtrans(veh.Gun_[0].gun_info.frame2.second, MATRIX_ref::RotY(atan2f(eyevec.x(), eyevec.z())));
 						camvec = campos - eyevec;
@@ -1743,7 +1699,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					if (ads) {
 						campos = veh.obj.frame(veh.use_veh.fps_view.first) + MATRIX_ref::Vtrans(eye_pos_ads, veh.mat);
 						campos.y(std::max(campos.y(), 5.f));
-						if (1) {
+						if (useVR_e) {
 							camvec = campos - MATRIX_ref::Vtrans(eyevec, veh.mat);
 						}
 						else {
@@ -1760,7 +1716,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					else {
 						camvec = veh.pos + veh.mat.yvec() * (6.f);
 						camvec.y(std::max(camvec.y(), 5.f));
-						if (1) {
+						if (useVR_e) {
 							campos = camvec + MATRIX_ref::Vtrans(eyevec, veh.mat) * (range);
 							campos.y(std::max(campos.y(), 0.f));
 							if (mapparts->map_col_line_nearest(camvec, &campos)) {
@@ -1853,8 +1809,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				}
 			}
 
-			//VECTOR_ref eyepos = vrparts->SetEyePositionVR(0);
-			//
 			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 0.01f, 5000.0f, fov / ratio, campos, camvec, camup);
 			//照準座標取得
 			{
@@ -1909,14 +1863,21 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				//ブルーム
 				Hostpassparts->bloom(BufScreen, (mine.mode == 0) ? 64 : (255));
 				//UI
-				UIparts->draw(aimposout, mine, ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads);
+				if (useVR_e) {
+					UIparts->draw(aimposout, mine, ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads, (*vrparts->get_device())[vrparts->get_left_hand_num()]);
+				}
+				else {
+					UIparts->draw(aimposout, mine, ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads);
+				}
 			}
 			//VRに移す
-			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
-			{
-				outScreen.DrawGraph(0, 0, false);
-				for (char i = 0; i < 2; i++) {
-					vrparts->PutEye((ID3D11Texture2D*)GetUseDirect3D11BackBufferTexture2D(), i);
+			if (useVR_e) {
+				GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
+				{
+					outScreen.DrawGraph(0, 0, false);
+					for (char i = 0; i < 2; i++) {
+						vrparts->PutEye((ID3D11Texture2D*)GetUseDirect3D11BackBufferTexture2D(), i);
+					}
 				}
 			}
 			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
@@ -1927,19 +1888,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				Debugparts->end_way();
 				Debugparts->debug(10, 10, fps, float(GetNowHiPerformanceCount() - waits) / 1000.f);
 			}
-			{
-				auto& ptr_LEFTHAND = (*vrparts->get_device())[vrparts->get_left_hand_num()];
-				{
-					DrawFormatString(0, 300, GetColor(255, 255, 255), "%d", ptr_LEFTHAND.on[1]);
-
-					int i = 18;
-					DrawFormatString(0, 300 + i, GetColor(255, 255, 255), "%d", vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_A)); i += 18;
-					DrawFormatString(0, 300 + i, GetColor(255, 255, 255), "%d", vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_IndexController_B)); i += 18;
-				}
-			}
 			Drawparts->Screen_Flip(waits);
-			vrparts->Eye_Flip(waits);//フレーム開始の数ミリ秒前にstartするまでブロックし、レンダリングを開始する直前に呼び出す必要があります。
-
+			if (useVR_e) {
+				vrparts->Eye_Flip(waits);//フレーム開始の数ミリ秒前にstartするまでブロックし、レンダリングを開始する直前に呼び出す必要があります。
+			}
 			if (CheckHitKey(KEY_INPUT_ESCAPE) != 0) {
 				break;
 			}
