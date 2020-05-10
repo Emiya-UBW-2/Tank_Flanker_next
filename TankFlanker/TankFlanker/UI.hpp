@@ -2,41 +2,34 @@
 
 #include "VR.hpp"
 
-class UI : hit {
+class UI : Mainclass {
 private:
 	GraphHandle circle;
 	GraphHandle aim;
 	GraphHandle scope;
 	GraphHandle lock;
 	GraphHandle hit;
-	GraphHandle CompassScreen;
 	GraphHandle CamScreen;
 	GraphHandle HP_per;
 	std::array<float, veh_all> ber{ 0 };
 	GraphHandle HP_ber;
 
 	GraphHandle bufScreen;
-	MV1 Compass;
 	//font
 	FontHandle font18;
 	FontHandle font12;
-
+	//空描画
 	MV1 garage;
 	MV1 sky;
-	GraphHandle SkyScreen; //空描画
-
-	frames stickx_f, sticky_f, stickz_f;
-
-	frames compass_f;
+	GraphHandle SkyScreen; 
+	//コックピット
+	frames stickx_f, sticky_f, stickz_f,compass_f;
 	VECTOR_ref cockpit_v;
 	MV1 cockpit;
 	GraphHandle cockpitScreen;
-
+	//
 	float siz_autoaim = 0.f;
 	float siz_autoaim_pic = 0.f;
-
-	GraphHandle outScreen; //結果
-
 public:
 	UI() {
 		lock = GraphHandle::Load("data/UI/battle_lock.bmp");
@@ -46,7 +39,7 @@ public:
 		scope = GraphHandle::Load("data/UI/battle_scope.png");
 		HP_per = GraphHandle::Load("data/UI/battle_hp_bar_max.bmp");
 		HP_ber = GraphHandle::Load("data/UI/battle_hp_bar.bmp");
-		CompassScreen = GraphHandle::Make(240, 240, true);
+		cockpitScreen = GraphHandle::Make(dispx, dispy, true);
 		CamScreen = GraphHandle::Make(240, 240, true);
 		bufScreen = GraphHandle::Make(dispx, dispy, true);
 
@@ -57,7 +50,7 @@ public:
 				cockpit_v = cockpit.frame(i);
 			}
 			else if ((p.find("姿勢指示器", 0) != std::string::npos) && (p.find("予備", 0) == std::string::npos)) {
-				compass_f = { i,cockpit.frame(i) - cockpit.frame(cockpit.frame_parent(i)) };
+				compass_f = { i,cockpit.frame(i) - cockpit.frame(int(cockpit.frame_parent(i))) };
 				//ジャイロコンパス
 			}
 			else if (p.find("スティック縦", 0) != std::string::npos) {
@@ -69,11 +62,6 @@ public:
 			}
 		}
 
-		cockpitScreen = GraphHandle::Make(dispx, dispy, true);
-
-
-		MV1::Load("data/model/compass/model.mv1", &Compass, true);
-		Compass.SetPosition(VGet(0.f, 0.f, 0.f));
 		font18 = FontHandle::Create(y_r(18), DX_FONTTYPE_EDGE);
 		font12 = FontHandle::Create(y_r(12), DX_FONTTYPE_EDGE);
 		MV1::Load("data/model/garage/model.mv1", &garage, false);
@@ -83,7 +71,7 @@ public:
 	~UI() {
 	}
 	template <size_t N>
-	bool select_window(hit::Chara* chara, std::array<std::vector<hit::Vehcs>, N>* vehcs) {
+	bool select_window(Mainclass::Chara* chara, std::array<std::vector<Mainclass::Vehcs>, N>* vehcs) {
 		if (1) {
 			VECTOR_ref campos = VGet(0.f, 0.f, -15.f);
 			VECTOR_ref camaim = VGet(0.f, 3.f, 0.f);
@@ -497,7 +485,7 @@ public:
 	}
 	void draw(
 		const VECTOR_ref& aimpos,
-		const hit::Chara& chara,
+		const Mainclass::Chara& chara,
 		const bool& ads,
 		const float& fps,
 		const bool& auto_aim,
@@ -513,15 +501,6 @@ public:
 		if (chara.mode == 1) {
 			auto scr = GetDrawScreen();
 			auto fov = GetCameraFov();
-			{
-				CompassScreen.SetDraw_Screen(0.1f, 6.0f, fov, VGet(0.f, 0.f, 3.f), VGet(0.f, 0.f, 0.f), VGet(0.f, -1.f, 0.f));
-				SetupCamera_Ortho(1.f);
-				auto ltd = GetLightDirection();
-				SetLightDirection(VGet(0.f, 0.f, -1.f));
-				Compass.SetRotationZYAxis(chara.vehicle[1].mat.Inverse().zvec(), chara.vehicle[1].mat.Inverse().yvec(), 0.f);
-				Compass.DrawModel();
-				SetLightDirection(ltd);
-			}
 			{
 				SetupCamera_Perspective(fov);
 				cockpitScreen.SetDraw_Screen(0.01f, 2.0f, fov, VGet(0.f, 0.f, 0.f), VECTOR_ref(camvec) - campos, camup);
@@ -599,14 +578,12 @@ public:
 				if (veh.rounds != 0.f) {
 					DrawBox(xp, yp + y_r(20), xp + x_r(int(200.f * veh.rounds / veh.gun_info.rounds)), yp + y_r(38), GetColor(255, 192, 0), TRUE);
 				}
-				font18.DrawString(xp, yp, veh.bullet[veh.usebullet].spec.name, GetColor(255, 255, 255));
+				font18.DrawString(xp, yp, veh.bullet[veh.usebullet].spec.name_a, GetColor(255, 255, 255));
 				font18.DrawStringFormat(xp + x_r(200) - font18.GetDrawWidthFormat("%04d / %04d", veh.rounds, veh.gun_info.rounds), yp + y_r(20), GetColor(255, 255, 255), "%04d / %04d", veh.rounds, veh.gun_info.rounds);
 				i++;
 			}
 			if (chara.mode == 1) {
 				auto& veh = chara.vehicle[chara.mode];
-
-				CompassScreen.DrawExtendGraph(dispx * 2 / 3, dispy * 2 / 3, dispx * 2 / 3 + y_r(240 / 2), dispy * 2 / 3 + y_r(240 / 2), true);
 
 				DrawLine(dispx / 3, dispy / 3, dispx / 3, dispy * 2 / 3, GetColor(255, 255, 255), 3);
 				font18.DrawStringFormat(dispx / 3 - font18.GetDrawWidthFormat("SPD %6.2f km/h ", veh.speed * 3.6f), dispy / 2, GetColor(255, 255, 255), "SPD %6.2f km/h", veh.speed * 3.6f);
@@ -670,7 +647,7 @@ public:
 				if (veh.rounds != 0.f) {
 					DrawBox(xp, yp + y_r(22), xp + x_r(int(200.f * veh.rounds / veh.gun_info.rounds)), yp + y_r(26), GetColor(255, 192, 0), TRUE);
 				}
-				font12.DrawString(xp, yp, veh.bullet[veh.usebullet].spec.name, GetColor(255, 255, 255));
+				font12.DrawString(xp, yp, veh.bullet[veh.usebullet].spec.name_a, GetColor(255, 255, 255));
 				font12.DrawStringFormat(xp + x_r(200) - font12.GetDrawWidthFormat("%04d / %04d", veh.rounds, veh.gun_info.rounds), yp + y_r(14), GetColor(255, 255, 255), "%04d / %04d", veh.rounds, veh.gun_info.rounds);
 				i++;
 			}
@@ -678,10 +655,10 @@ public:
 				auto& veh = chara.vehicle[chara.mode];
 
 				int xp1 = dispx / 2 - dispy / 6 + y_r(240 / 2);
-				int yp1 = dispy / 2 - dispy / 6 + y_r(240 / 2);
+				//int yp1 = dispy / 2 - dispy / 6 + y_r(240 / 2);
 
 				int xp2 = dispx / 2 + dispy / 6 - y_r(240 / 2);
-				int yp2 = dispy / 2 + dispy / 6 - y_r(240 / 2);
+				//int yp2 = dispy / 2 + dispy / 6 - y_r(240 / 2);
 
 				//CompassScreen.DrawExtendGraph(xp2, yp2, xp2 + y_r(240 / 2), yp2 + y_r(240 / 2), true);
 
@@ -739,7 +716,7 @@ public:
 	}
 	void draw(
 		const VECTOR_ref& aimpos,
-		const hit::Chara& chara,
+		const Mainclass::Chara& chara,
 		const bool& ads,
 		const float& fps,
 		const bool& auto_aim,

@@ -24,7 +24,7 @@ public:
 		MV1::Load("data/model/sea/model.mv1", &sea, true);	 //海
 	}
 
-	void set_map(std::vector<hit::wallPats>* wall, std::vector<hit::treePats>* tree, std::unique_ptr<b2World>& world) {
+	void set_map(std::vector<Mainclass::wallPats>* wall, std::vector<Mainclass::treePats>* tree, std::unique_ptr<b2World>& world) {
 		map.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
 
 		VECTOR_ref size;
@@ -108,7 +108,7 @@ public:
 			w.b2.playerfix = w.b2.body->CreateFixture(&fixtureDef); /*シェイプをボディに追加します*/
 		}
 	}
-	void delete_map(std::vector<hit::wallPats>* wall, std::vector<hit::treePats>* tree) {
+	void delete_map(std::vector<Mainclass::wallPats>* wall, std::vector<Mainclass::treePats>* tree) {
 		map.Dispose();		   //map
 		map_col.Dispose();		   //mapコリジョン
 		tree_model.Dispose(); //木

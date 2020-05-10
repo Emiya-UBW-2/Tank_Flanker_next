@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <string>
 #include <string_view>
-#include "DxLib.h"
+#include "DXLib_ref.h"
 
 using std::int8_t;
 using std::size_t;

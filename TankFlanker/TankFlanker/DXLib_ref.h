@@ -150,8 +150,12 @@ public:
 		*/
 		ScreenFlip();
 		if (!use_vsync) {
-		//	while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
+			while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
 		}
+		return true;
+	}
+	bool Screen_Flip(void) {
+		ScreenFlip();
 		return true;
 	}
 };
