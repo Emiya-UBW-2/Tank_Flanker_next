@@ -10,15 +10,19 @@ private:
 	//
 	bool dof_flag = true;
 	bool bloom_flag = true;
-
+	int disp_x = 1920;
+	int disp_y = 1080;
 public:
-	HostPassEffect(const bool& dof_, const bool& bloom_) {
+	HostPassEffect(const bool& dof_, const bool& bloom_, const int& xd, const int& yd) {
+		disp_x = xd;
+		disp_y = yd;
+
 		dof_flag = dof_;
 		bloom_flag = bloom_;
-		FarScreen = GraphHandle::Make(dispx, dispy, true);
-		MainScreen = GraphHandle::Make(dispx, dispy, true);
-		NearScreen = GraphHandle::Make(dispx, dispy, true);
-		GaussScreen = GraphHandle::Make(dispx / EXTEND, dispy / EXTEND); /*エフェクト*/
+		FarScreen = GraphHandle::Make(disp_x, disp_y, true);
+		MainScreen = GraphHandle::Make(disp_x, disp_y, true);
+		NearScreen = GraphHandle::Make(disp_x, disp_y, true);
+		GaussScreen = GraphHandle::Make(disp_x / EXTEND, disp_y / EXTEND); /*エフェクト*/
 	}
 	~HostPassEffect() {
 	}
@@ -73,8 +77,8 @@ public:
 			GraphFilter(GaussScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 1000);
 			SetDrawMode(DX_DRAWMODE_BILINEAR);
 			SetDrawBlendMode(DX_BLENDMODE_ADD, level);
-			GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
-			GaussScreen.DrawExtendGraph(0, 0, dispx, dispy, false);
+			GaussScreen.DrawExtendGraph(0, 0, disp_x, disp_y, false);
+			GaussScreen.DrawExtendGraph(0, 0, disp_x, disp_y, false);
 			SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
 		}
 	}

@@ -4,14 +4,17 @@
 #include "map.hpp"
 #include "VR.hpp"
 
-
 int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nShowCmd) {
-	auto Drawparts = std::make_unique<DXDraw>("TankFlanker", 90.f); /*汎用クラス*/
 	//設定読み込み
+	SetOutApplicationLogValidFlag(FALSE);  /*log*/
 	bool dof_e = false;
 	bool bloom_e = false;
 	bool shadow_e = false;
 	bool useVR_e = true;
+	int dispx = 1080; /*描画X*/
+	int dispy = 1200; /*描画Y*/
+	int out_dispx = dispx * 960 / dispy; /*ウィンドウX*/
+	int out_dispy = dispy * 960 / dispy; /*ウィンドウY*/
 	{
 		int mdata = FileRead_open("data/setting.txt", FALSE);
 		dof_e = getparam_bool(mdata);
@@ -20,12 +23,30 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		useVR_e = getparam_bool(mdata);
 		FileRead_close(mdata);
 	}
-	auto vrparts = std::make_unique<VRDraw>(useVR_e);	/*演算クラス*/
-	auto UIparts = std::make_unique<UI>();			      /*UI*/
-	auto Debugparts = std::make_unique<DeBuG>(90);		      /*デバッグ*/
-	auto Hostpassparts = std::make_unique<HostPassEffect>(dof_e, bloom_e); /*ホストパスエフェクト*/
+	if (useVR_e) {
+		dispx = 1080;
+		dispy = 1200;
+		out_dispx = dispx * 960 / dispy;
+		out_dispy = dispy * 960 / dispy;
+	}
+	else {
+		dispx = 1920;
+		dispy = 1080;
+		out_dispx = dispx;
+		out_dispy = dispy;
+	}
+
+	auto Drawparts = std::make_unique<DXDraw>("TankFlanker", dispx, dispy, 90.f);		 /*汎用クラス*/
+	auto vrparts = std::make_unique<VRDraw>(useVR_e);					 /*演算クラス*/
+	auto UIparts = std::make_unique<UI>(out_dispx, out_dispy, dispx, dispy);		 /*UI*/
+	auto Debugparts = std::make_unique<DeBuG>(90);						 /*デバッグ*/
+	auto Hostpassparts = std::make_unique<HostPassEffect>(dof_e, bloom_e, dispx, dispy);	 /*ホストパスエフェクト*/
+
+	if (useVR_e) {
+		SetWindowSize(out_dispx, out_dispy);
+		SetWindowPosition((deskx - out_dispx) / 2, 0);
+	}
 	/*BOX2D*/
-	
 	auto world = std::make_unique<b2World>(b2Vec2(0.0f, 0.0f)); /* 剛体を保持およびシミュレートするワールドオブジェクトを構築*/
 	VECTOR_ref eyevec;					    //視点
 	VECTOR_ref campos, camvec, camup;			    //カメラ
@@ -34,7 +55,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	GraphHandle BufScreen = GraphHandle::Make(dispx, dispy);    //描画スクリーン
 	GraphHandle outScreen = GraphHandle::Make(dispx, dispy);    //描画スクリーン
 	/*map*/
-	auto mapparts = std::make_unique<Mapclass>();
+	auto mapparts = std::make_unique<Mapclass>(dispx, dispy);
 	//その他
 	MV1 hit_pic;      //弾痕
 	MV1 plane_effect; //飛行機エフェクト
@@ -47,7 +68,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	float range_p = 0.f;
 	uint8_t change_vehicle = 0;
 
-	VECTOR_ref eye_pos_ads= VGet(0.f, 0.58f, 0.f);
+	VECTOR_ref eye_pos_ads = VGet(0.f, 0.58f, 0.f);
 	//ロックオン
 	VECTOR_ref aimposout_lockon;
 	switchs lock_on = { false, uint8_t(0) };
@@ -72,7 +93,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	bool HMDon;
 
 	//ココから繰り返し読み込み//-------------------------------------------------------------------
-	do{
+	do {
 		//キャラ選択
 		chara.resize(1);
 		if (!UIparts->select_window(&chara[0], &Vehicles)) {
@@ -82,7 +103,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		mapparts->set_map_pre();
 		UIparts->load_window("マップモデル");			   //ロード画面
 		//壁
-		mapparts->set_map(&wall,&tree,world);
+		mapparts->set_map(&wall, &tree, world);
 		//
 		Drawparts->Set_light(VGet(0.0f, -0.5f, 0.5f));
 		if (shadow_e) {
@@ -237,7 +258,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			//
 		};
 		//影に描画するものを指定する(仮)
-		auto draw_in_shadow = [&chara,&tree] {
+		auto draw_in_shadow = [&chara, &tree] {
 			for (auto& c : chara) {
 				for (auto& veh : c.vehicle) {
 					veh.obj.DrawModel();
@@ -259,7 +280,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				}
 			}
 		};
-		auto draw_on_shadow = [&mapparts, &chara, &ads, &tree, &campos,&vrparts] {
+		auto draw_on_shadow = [&mapparts, &chara, &ads, &tree, &campos, &vrparts] {
 			//マップ
 			SetFogStartEnd(0.0f, 3000.f);
 			SetFogColor(128, 128, 128);
@@ -466,7 +487,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 						}
 					}
 
-					if (((GetMouseInput() & MOUSE_INPUT_RIGHT) != 0 && !lock_on.first)|| mine.mode != 0) { //砲塔ロック
+					if (((GetMouseInput() & MOUSE_INPUT_RIGHT) != 0 && !lock_on.first) || mine.mode != 0) { //砲塔ロック
 						mine.view_yrad = 0.f;
 						mine.view_xrad = 0.f;
 					}
@@ -1016,9 +1037,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 							}
 						}
 						else {
-						for (auto& w : veh.use_veh.wheelframe) {
-							easing_set(&w.gndsmksize, 0.01f, 0.9f, fps);
-						}
+							for (auto& w : veh.use_veh.wheelframe) {
+								easing_set(&w.gndsmksize, 0.01f, 0.9f, fps);
+							}
 						}
 						veh.pos += veh.add + (veh.mat.zvec() * (-veh.speed / fps));
 					}
@@ -1187,7 +1208,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				{
 					//転輪
 					auto& veh = c.vehicle[0];
-					b2Vec2 tmpb2 = b2Vec2( (M_GR / fps) * (veh.mat.zvec().dot(VGet(0, 1.f, 0))), (M_GR / fps) * (veh.mat.yvec().dot(VGet(0, 1.f, 0))) );
+					b2Vec2 tmpb2 = b2Vec2((M_GR / fps) * (veh.mat.zvec().dot(VGet(0, 1.f, 0))), (M_GR / fps) * (veh.mat.yvec().dot(VGet(0, 1.f, 0))));
 					int z = 0;
 					for (auto& f : c.foot) {
 						size_t i = 0;
@@ -1268,7 +1289,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 										//その後処理
 										switch (a.spec.type_a) {
 										case 0: //AP
-											if (!(hittank || hitplane|| hitcal)) {
+											if (!(hittank || hitplane || hitcal)) {
 												if (ground_hit) {
 													if (a.spec.caliber_a >= 0.020f) {
 														set_effect(&c.effcs[ef_gndhit], a.pos + normal * (0.1f), normal);
@@ -1462,7 +1483,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			}
 			{
 				//他の座標をここで出力(ホスト)
-			} 
+			}
 			{
 				//ホストからの座標をここで入力
 			}
@@ -1493,7 +1514,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				auto& veh = mine.vehicle[mine.mode];
 				switch (mine.mode) {
 				case 0:
-					{
+				{
 					if (useVR_e) {
 						eyevec = MATRIX_ref::Vtrans(eyevec, veh.mat);
 					}
@@ -1529,9 +1550,9 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 						}
 					}
 				}
-					break;
+				break;
 				case 1:
-					{
+				{
 					if (ads) {
 						campos = veh.obj.frame(veh.use_veh.fps_view.first) + MATRIX_ref::Vtrans(eye_pos_ads, veh.mat);
 						campos.y(std::max(campos.y(), 5.f));
@@ -1591,13 +1612,34 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 
 					}
 				}
-					break;
+				break;
 				case 2:
-					{
-						camvec = veh.pos + veh.mat.yvec() * (30.f);
-						camvec.y(std::max(camvec.y(), 5.f));
-						if (useVR_e) {
-							campos = camvec + MATRIX_ref::Vtrans(eyevec, veh.mat) * (range);
+				{
+					camvec = veh.pos + veh.mat.yvec() * (30.f);
+					camvec.y(std::max(camvec.y(), 5.f));
+					if (useVR_e) {
+						campos = camvec + MATRIX_ref::Vtrans(eyevec, veh.mat) * (range);
+						campos.y(std::max(campos.y(), 0.f));
+						if (mapparts->map_col_line_nearest(camvec, &campos)) {
+							campos = camvec + (campos - camvec) * (0.9f);
+						}
+						for (auto& t : chara) {
+							auto hp = t.vehicle[2].col.CollCheck_Line(camvec, campos, -1, 0);
+							if (hp.HitFlag == TRUE) {
+								campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
+							}
+						}
+						camup = veh.mat.yvec();
+					}
+					else {
+						if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
+							eyevec = (camvec - aimpos[1]).Norm();
+							campos = camvec + eyevec * (range);
+							camup = veh.mat.yvec();
+
+						}
+						else {
+							campos = camvec + eyevec * (range);
 							campos.y(std::max(campos.y(), 0.f));
 							if (mapparts->map_col_line_nearest(camvec, &campos)) {
 								campos = camvec + (campos - camvec) * (0.9f);
@@ -1608,32 +1650,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 									campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
 								}
 							}
-							camup = veh.mat.yvec();
-						}
-						else {
-							if ((GetMouseInput() & MOUSE_INPUT_RIGHT) == 0) {
-								eyevec = (camvec - aimpos[1]).Norm();
-								campos = camvec + eyevec * (range);
-								camup = veh.mat.yvec();
-
-							}
-							else {
-								campos = camvec + eyevec * (range);
-								campos.y(std::max(campos.y(), 0.f));
-								if (mapparts->map_col_line_nearest(camvec, &campos)) {
-									campos = camvec + (campos - camvec) * (0.9f);
-								}
-								for (auto& t : chara) {
-									auto hp = t.vehicle[2].col.CollCheck_Line(camvec, campos, -1, 0);
-									if (hp.HitFlag == TRUE) {
-										campos = camvec + (VECTOR_ref(hp.HitPosition) - camvec) * (0.9f);
-									}
-								}
-								camup = VGet(0.f, 1.f, 0.f);
-							}
+							camup = VGet(0.f, 1.f, 0.f);
 						}
 					}
-					break;
+				}
+				break;
 				}
 			}
 			{
@@ -1641,8 +1662,23 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				float neardist = 1.f;
 				switch (mine.mode) {
 				case 0:
-					{
-						VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (1000.f);
+				{
+					VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (1000.f);
+
+					mapparts->map_col_line_nearest(campos, &aimingpos);
+					for (auto& t : chara) {
+						auto hp = t.vehicle[2].col.CollCheck_Line(campos, aimingpos, -1, 0);
+						if (hp.HitFlag == TRUE) {
+							aimingpos = hp.HitPosition;
+						}
+					}
+					fardist = std::clamp((campos - aimingpos).size(), 300.f, 1000.f);
+				}
+				break;
+				case 1:
+				{
+					if (ads) {
+						VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (3000.f);
 
 						mapparts->map_col_line_nearest(campos, &aimingpos);
 						for (auto& t : chara) {
@@ -1651,33 +1687,18 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 								aimingpos = hp.HitPosition;
 							}
 						}
-						fardist = std::clamp((campos - aimingpos).size(), 300.f, 1000.f);
+						fardist = std::clamp((campos - aimingpos).size(), 300.f, 3000.f);
 					}
-					break;
-				case 1:
-					{
-						if (ads) {
-							VECTOR_ref aimingpos = campos + (camvec - campos).Norm() * (3000.f);
-
-							mapparts->map_col_line_nearest(campos, &aimingpos);
-							for (auto& t : chara) {
-								auto hp = t.vehicle[2].col.CollCheck_Line(campos, aimingpos, -1, 0);
-								if (hp.HitFlag == TRUE) {
-									aimingpos = hp.HitPosition;
-								}
-							}
-							fardist = std::clamp((campos - aimingpos).size(), 300.f, 3000.f);
-						}
-						else {
-							fardist = 6000.f;
-						}
-					}
-					break;
-				case 2:
-					{
+					else {
 						fardist = 6000.f;
 					}
-					break;
+				}
+				break;
+				case 2:
+				{
+					fardist = 6000.f;
+				}
+				break;
 				}
 				switch (mine.mode) {
 				case 0:
@@ -1691,7 +1712,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					break;
 				}
 				//被写体深度描画
-				if(shadow_e){
+				if (shadow_e) {
 					Hostpassparts->dof(&BufScreen, mapparts->sky_draw(campos, camvec, camup, fov / ratio), [&Drawparts, &draw_on_shadow] { Drawparts->Draw_by_Shadow(draw_on_shadow); }, campos, camvec, camup, fov / ratio, fardist, neardist);
 				}
 				else {
@@ -1778,7 +1799,6 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 			}
 			GraphHandle::SetDraw_Screen(DX_SCREEN_BACK);
 			{
-				SetWindowSize(out_dispx, out_dispy);
 				outScreen.DrawExtendGraph(0, 0, out_dispx, out_dispy, false);
 				//デバッグ
 				Debugparts->end_way();

@@ -13,17 +13,6 @@ constexpr float M_GR = -9.8f;				  /*重力加速度*/
 inline const int deskx = (GetSystemMetrics(SM_CXSCREEN)); /*デスクトップX*/
 inline const int desky = (GetSystemMetrics(SM_CYSCREEN)); /*デスクトップY*/
 
-//inline const int dispx = deskx; /*描画X*/
-//inline const int dispy = desky; /*描画Y*/
-
-inline const int dispx = 1080; /*描画X*/
-inline const int dispy = 1200; /*描画Y*/
-
-inline const int out_dispx = dispx * 960 / dispy; /*ウィンドウX*/
-inline const int out_dispy = dispy * 960 / dispy;// +256; /*ウィンドウY*/
-//リサイズ
-#define x_r(p1) (int(p1) * out_dispx / deskx)
-#define y_r(p1) (int(p1) * out_dispy / desky)
 //マウス判定
 #define in2_(mx, my, x1, y1, x2, y2) (mx >= x1 && mx <= x2 && my >= y1 && my <= y2)
 #define in2_mouse(x1, y1, x2, y2) (in2_(mousex, mousey, x1, y1, x2, y2))
@@ -38,7 +27,7 @@ static float rad2deg(T p1) {
 } //ラジアンから角度に
 //
 static std::string getright(const char* p1) {
-	std::string tempname= p1;
+	std::string tempname = p1;
 	return tempname.substr(tempname.find('=') + 1);
 }
 //
@@ -81,21 +70,24 @@ static const bool getparam_bool(int p1) {
 //
 void easing_set(float* first, const float& aim, const float& ratio, const float& fps) {
 	if (ratio == 0.f) {
-		*first= aim;
-	} else {
+		*first = aim;
+	}
+	else {
 		if (aim != 0.f) {
-			*first+= (aim - *first) * (1.f - powf(ratio, 60.f / fps));
-		} else {
-			*first*= powf(ratio, 60.f / fps);
+			*first += (aim - *first) * (1.f - powf(ratio, 60.f / fps));
+		}
+		else {
+			*first *= powf(ratio, 60.f / fps);
 		}
 	}
 };
 //
 void easing_set(VECTOR_ref* first, const VECTOR_ref& aim, const float& ratio, const float& fps) {
 	if (ratio == 0.f) {
-		*first= aim;
-	} else {
-		*first+= (VECTOR_ref(aim) - *first) * (1.f - powf(ratio, 60.f / fps));
+		*first = aim;
+	}
+	else {
+		*first += (VECTOR_ref(aim) - *first) * (1.f - powf(ratio, 60.f / fps));
 	}
 };
 

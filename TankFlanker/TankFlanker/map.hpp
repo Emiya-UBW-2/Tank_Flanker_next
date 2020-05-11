@@ -6,10 +6,14 @@ private:
 	MV1 sky;	  //‹ó
 	MV1 sea;	  //ŠC
 	GraphHandle SkyScreen;
-
+	int disp_x = 1920;
+	int disp_y = 1080;
 public:
-	Mapclass() {
-		SkyScreen = GraphHandle::Make(dispx, dispy);    //‹ó•`‰æ
+	Mapclass(const int& xd, const int& yd) {
+		disp_x = xd;
+		disp_y = yd;
+
+		SkyScreen = GraphHandle::Make(disp_x, disp_y);    //‹ó•`‰æ
 	}
 
 	~Mapclass() {
@@ -115,7 +119,7 @@ public:
 		tree_far.Dispose(); //–Ø
 		sky.Dispose();	 //‹ó
 		sea.Dispose();	 //ŠC
-		for(auto&t : *tree){
+		for (auto&t : *tree) {
 			t.obj.Dispose();
 			t.obj_far.Dispose();
 		}

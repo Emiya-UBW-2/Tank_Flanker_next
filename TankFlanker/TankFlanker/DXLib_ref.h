@@ -16,16 +16,16 @@
 #include <list>
 #include <vector>
 enum Effect {
-	ef_fire	  = 0, //発砲炎
-	ef_reco	  = 1, //大口径跳弾
-	ef_reco2  = 2, //小口径跳弾
+	ef_fire = 0, //発砲炎
+	ef_reco = 1, //大口径跳弾
+	ef_reco2 = 2, //小口径跳弾
 	ef_gndhit = 3, //大口径着弾
-	ef_gndhit2= 4, //小口径着弾
-	ef_bomb   = 5, //撃破爆発
+	ef_gndhit2 = 4, //小口径着弾
+	ef_bomb = 5, //撃破爆発
 	ef_smoke1 = 6, //ミサイル炎
 	ef_smoke2 = 7, //銃の軌跡
-	effects   = 8, //読み込む
-	efs_user  = 8  //
+	effects = 8, //読み込む
+	efs_user = 8  //
 };
 struct EffectS {
 	bool flug{ false };		 /**/
@@ -38,27 +38,32 @@ struct EffectS {
 
 class DXDraw {
 private:
-	const bool use_shadow= true;			     /*影描画*/
-	int shadow_near      = 0;			     /*近影*/
-	int shadow_far       = 0;			     /*遠影*/
-	bool use_pixellighting= false;			     /**/
-	bool use_vsync= false;				     /*垂直同期*/
-	float frate   = 60.f;				     /*フレームレート*/
+	const bool use_shadow = true;			     /*影描画*/
+	int shadow_near = 0;			     /*近影*/
+	int shadow_far = 0;			     /*遠影*/
+	bool use_pixellighting = false;			     /**/
+	bool use_vsync = false;				     /*垂直同期*/
+	float frate = 60.f;				     /*フレームレート*/
 	std::array<EffekseerEffectHandle, effects> effHndle; /*エフェクトリソース*/
 	EffekseerEffectHandle gndsmkHndle;		     /*エフェクトリソース*/
+	int disp_x = 1920;
+	int disp_y = 1080;
 public:
 	EffekseerEffectHandle& get_effHandle(int p1) noexcept { return effHndle[p1]; }
 	const EffekseerEffectHandle& get_effHandle(int p1) const noexcept { return effHndle[p1]; }
 	EffekseerEffectHandle& get_gndhitHandle() noexcept { return gndsmkHndle; }
 	const EffekseerEffectHandle& get_gndhitHandle() const noexcept { return gndsmkHndle; }
 
-	DXDraw(const char* title, const float& fps = 60.f) {
+	DXDraw(const char* title, const int& xd, const int& yd, const float& fps = 60.f) {
+		disp_x = xd;
+		disp_y = yd;
+
 		frate = fps;
 		SetOutApplicationLogValidFlag(FALSE);  /*log*/
 		SetMainWindowText(title);	       /*タイトル*/
 		ChangeWindowMode(TRUE);		       /*窓表示*/
 		SetUseDirect3DVersion(DX_DIRECT3D_11); /*directX ver*/
-		SetGraphMode(dispx, dispy, 32);	       /*解像度*/
+		SetGraphMode(disp_x, disp_y, 32);	       /*解像度*/
 		SetUseDirectInputFlag(TRUE);			       /**/
 		SetWindowSizeChangeEnableFlag(FALSE, FALSE);	       /*ウインドウサイズを手動不可、ウインドウサイズに合わせて拡大もしないようにする*/
 		SetUsePixelLighting(use_pixellighting ? TRUE : FALSE); /*ピクセルシェーダの使用*/
@@ -72,9 +77,6 @@ public:
 		SetUseZBuffer3D(TRUE);				       /*zbufuse*/
 		SetWriteZBuffer3D(TRUE);			       /*zbufwrite*/
 		SetDrawMode(DX_DRAWMODE_BILINEAR);		       /**/
-
-		SetWindowSize(out_dispx, out_dispy);
-		SetWindowPosition((deskx- out_dispx)/2, 0);
 		//エフェクト
 		{
 			size_t j = 0;
