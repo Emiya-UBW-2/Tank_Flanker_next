@@ -21,6 +21,7 @@ private:
 	//空描画
 	MV1 garage;
 	MV1 sky;
+	MV1 sea;
 	GraphHandle SkyScreen; 
 	//コックピット
 	frames stickx_f, sticky_f, stickz_f,compass_f;
@@ -66,6 +67,7 @@ public:
 		font12 = FontHandle::Create(y_r(12), DX_FONTTYPE_EDGE);
 		MV1::Load("data/model/garage/model.mv1", &garage, false);
 		MV1::Load("data/model/sky/model.mv1", &sky, false);
+		MV1::Load("data/model/sea/model.mv1", &sea, true);
 		SkyScreen = GraphHandle::Make(dispx, dispy);
 	}
 	~UI() {
@@ -77,13 +79,11 @@ public:
 			VECTOR_ref camaim = VGet(0.f, 3.f, 0.f);
 			uint8_t upct = 0, dnct = 0, rtct = 0, ltct = 0, changecnt = 0;
 			float fov = deg2rad(90 / 2);
-			auto& t = (*vehcs)[0];
-			auto& p = (*vehcs)[1];
 
-			chara->vehicle[0].use_id %= t.size(); //戦車
-			chara->vehicle[0].camo_sel = std::min(chara->vehicle[0].camo_sel, t[chara->vehicle[0].use_id].camog.size() - 1);
-			chara->vehicle[1].use_id %= p.size(); //飛行機
-			chara->vehicle[1].camo_sel = std::min(chara->vehicle[1].camo_sel, p[chara->vehicle[1].use_id].camog.size() - 1);
+			chara->vehicle[0].use_id %= (*vehcs)[0].size(); //戦車
+			chara->vehicle[0].camo_sel = std::min(chara->vehicle[0].camo_sel, (*vehcs)[0][chara->vehicle[0].use_id].camog.size() - 1);
+			chara->vehicle[1].use_id %= (*vehcs)[1].size(); //飛行機
+			chara->vehicle[1].camo_sel = std::min(chara->vehicle[1].camo_sel, (*vehcs)[1][chara->vehicle[1].use_id].camog.size() - 1);
 			chara->mode = 1;
 
 			float speed = 0.f, wheel_rad = 0.f;
@@ -155,24 +155,24 @@ public:
 						easing_set(&campos, (MATRIX_ref::RotY(yrad_m) * MATRIX_ref::RotX(xrad_m)).zvec() * (-15.f) + VGet(0.f, 3.f, 0.f), 0.95f, fps);
 						camaim = pos + VGet(0.f, 3.f, 0.f);
 						if (upct == 1) {
-							++veh.use_id %= t.size();
-							veh.camo_sel = std::min(veh.camo_sel, t[veh.use_id].camog.size() - 1);
+							++veh.use_id %= (*vehcs)[0].size();
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[0][veh.use_id].camog.size() - 1);
 						}
 						if (dnct == 1) {
 							if (veh.use_id == 0) {
-								veh.use_id = t.size() - 1;
+								veh.use_id = (*vehcs)[0].size() - 1;
 							}
 							else {
 								--veh.use_id;
 							}
-							veh.camo_sel = std::min(veh.camo_sel, t[veh.use_id].camog.size() - 1);
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[0][veh.use_id].camog.size() - 1);
 						}
 						if (ltct == 1) {
-							++veh.camo_sel %= t[veh.use_id].camog.size();
+							++veh.camo_sel %= (*vehcs)[0][veh.use_id].camog.size();
 						}
 						if (rtct == 1) {
 							if (veh.camo_sel == 0) {
-								veh.camo_sel = t[veh.use_id].camog.size() - 1;
+								veh.camo_sel = (*vehcs)[0][veh.use_id].camog.size() - 1;
 							}
 							else {
 								--veh.camo_sel;
@@ -183,22 +183,22 @@ public:
 						easing_set(&campos, VGet(3.25f, 3.f, 7.5f), 0.95f, fps);
 						camaim = pos + VGet(0.f, 3.f, 0.f);
 					}
-					if (t[veh.use_id].camog.size() > 0) {
+					if ((*vehcs)[0][veh.use_id].camog.size() > 0) {
 						SetDrawScreen(CamScreen.get());
-						DrawExtendGraph(0, 0, 240, 240, t[veh.use_id].camog[veh.camo_sel], TRUE);
-						MV1SetTextureGraphHandle(t[veh.use_id].obj.get(), t[veh.use_id].camo_tex, t[veh.use_id].camog[veh.camo_sel], TRUE);
+						DrawExtendGraph(0, 0, 240, 240, (*vehcs)[0][veh.use_id].camog[veh.camo_sel], TRUE);
+						MV1SetTextureGraphHandle((*vehcs)[0][veh.use_id].obj.get(), (*vehcs)[0][veh.use_id].camo_tex, (*vehcs)[0][veh.use_id].camog[veh.camo_sel], TRUE);
 					}
 					GraphFilter(CamScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 2400);
 					if (veh.camo_sel != old) {
 						if (std::abs(int(int(veh.camo_sel) - old)) == 1) {
-							rad_i += 360 * int(int(veh.camo_sel) - old) / int(t[veh.use_id].camog.size());
+							rad_i += 360 * int(int(veh.camo_sel) - old) / int((*vehcs)[0][veh.use_id].camog.size());
 						}
 						else {
 							if (veh.camo_sel == 0) {
-								rad_i += 360 / int(t[veh.use_id].camog.size());
+								rad_i += 360 / int((*vehcs)[0][veh.use_id].camog.size());
 							}
 							else {
-								rad_i -= 360 / int(t[veh.use_id].camog.size());
+								rad_i -= 360 / int((*vehcs)[0][veh.use_id].camog.size());
 							}
 						}
 					}
@@ -223,10 +223,10 @@ public:
 
 						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 0, 0), TRUE);
 
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3), GetColor(0, 255, 0), "Name  :%s", t[veh.use_id].name.c_str());
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 20), GetColor(0, 255, 0), "Speed :%03.0f/%03.0f km/h", t[veh.use_id].flont_speed_limit, t[veh.use_id].back_speed_limit);
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 40), GetColor(0, 255, 0), "Turn  :%03.0f °/s", t[veh.use_id].body_rad_limit);
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 60), GetColor(0, 255, 0), "Turret:%03.0f °/s", t[veh.use_id].turret_rad_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3), GetColor(0, 255, 0), "Name  :%s", (*vehcs)[0][veh.use_id].name.c_str());
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 20), GetColor(0, 255, 0), "Speed :%03.0f/%03.0f km/h", (*vehcs)[0][veh.use_id].flont_speed_limit, (*vehcs)[0][veh.use_id].back_speed_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 40), GetColor(0, 255, 0), "Turn  :%03.0f °/s", (*vehcs)[0][veh.use_id].body_rad_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 60), GetColor(0, 255, 0), "Turret:%03.0f °/s", (*vehcs)[0][veh.use_id].turret_rad_limit);
 
 						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 255, 0), FALSE);
 						font12.DrawString(xp - y_r(120), yp - y_r(60 + 15), "Spec", GetColor(0, 255, 0));
@@ -239,16 +239,16 @@ public:
 						int ya = out_dispy * 2 / 3 + int((ber_r - y_r(150)) * cos(rad + deg2rad(180)));
 						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
-						int ys = 20 * int(t[veh.use_id].gunframe.size()) / 2 + 1;
+						int ys = 20 * int((*vehcs)[0][veh.use_id].gunframe.size()) / 2 + 1;
 
 						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 0, 0), TRUE);
 
-						if (t[veh.use_id].gunframe.size() == 0) {
+						if ((*vehcs)[0][veh.use_id].gunframe.size() == 0) {
 							font18.DrawString(xp - y_r(120 - 3), yp - y_r(ys - 3), "N/A", GetColor(0, 255, 0));
 						}
 						else {
-							for (int z = 0; z < t[veh.use_id].gunframe.size(); z++) {
-								font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(ys - 3 - 20 * z), GetColor(0, 255, 0), "No.%d  :%s", z, t[veh.use_id].gunframe[z].name.c_str());
+							for (int z = 0; z < (*vehcs)[0][veh.use_id].gunframe.size(); z++) {
+								font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(ys - 3 - 20 * z), GetColor(0, 255, 0), "No.%d  :%s", z, (*vehcs)[0][veh.use_id].gunframe[z].name.c_str());
 							}
 						}
 						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 255, 0), FALSE);
@@ -262,14 +262,14 @@ public:
 					{
 						garage.DrawModel();
 						wheel_rad -= speed;
-						for (auto& v : t[veh.use_id].wheelframe) {
-							t[veh.use_id].obj.SetFrameLocalMatrix(v.frame.first, MATRIX_ref::RotX(wheel_rad) * MATRIX_ref::Mtrans(v.frame.second));
+						for (auto& v : (*vehcs)[0][veh.use_id].wheelframe) {
+							(*vehcs)[0][veh.use_id].obj.SetFrameLocalMatrix(v.frame.first, MATRIX_ref::RotX(wheel_rad) * MATRIX_ref::Mtrans(v.frame.second));
 						}
-						for (auto& v : t[veh.use_id].wheelframe_nospring) {
-							t[veh.use_id].obj.SetFrameLocalMatrix(v.frame.first, MATRIX_ref::RotX(wheel_rad) * MATRIX_ref::Mtrans(v.frame.second));
+						for (auto& v : (*vehcs)[0][veh.use_id].wheelframe_nospring) {
+							(*vehcs)[0][veh.use_id].obj.SetFrameLocalMatrix(v.frame.first, MATRIX_ref::RotX(wheel_rad) * MATRIX_ref::Mtrans(v.frame.second));
 						}
-						t[veh.use_id].obj.SetMatrix(MATRIX_ref::RotX(deg2rad(speed / (60.f / 3.6f / fps) * 2.f)) * MATRIX_ref::Mtrans(pos));
-						t[veh.use_id].obj.DrawModel();
+						(*vehcs)[0][veh.use_id].obj.SetMatrix(MATRIX_ref::RotX(deg2rad(speed / (60.f / 3.6f / fps) * 2.f)) * MATRIX_ref::Mtrans(pos));
+						(*vehcs)[0][veh.use_id].obj.DrawModel();
 					}
 					SetDrawBlendMode(DX_BLENDMODE_ALPHA, std::clamp(255 - int(255.f * pos.z() / -10.f), 0, 255));
 					bufScreen.DrawGraph(0, 0, true);
@@ -299,24 +299,24 @@ public:
 
 						camaim = pos + VGet(0.f, 3.f, 0.f);
 						if (upct == 1) {
-							++veh.use_id %= p.size();
-							veh.camo_sel = std::min(veh.camo_sel, p[veh.use_id].camog.size() - 1);
+							++veh.use_id %= (*vehcs)[1].size();
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[1][veh.use_id].camog.size() - 1);
 						}
 						if (dnct == 1) {
 							if (veh.use_id == 0) {
-								veh.use_id = p.size() - 1;
+								veh.use_id = (*vehcs)[1].size() - 1;
 							}
 							else {
 								--veh.use_id;
 							}
-							veh.camo_sel = std::min(veh.camo_sel, p[veh.use_id].camog.size() - 1);
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[1][veh.use_id].camog.size() - 1);
 						}
 						if (ltct == 1) {
-							++veh.camo_sel %= p[veh.use_id].camog.size();
+							++veh.camo_sel %= (*vehcs)[1][veh.use_id].camog.size();
 						}
 						if (rtct == 1) {
 							if (veh.camo_sel == 0) {
-								veh.camo_sel = p[veh.use_id].camog.size() - 1;
+								veh.camo_sel = (*vehcs)[1][veh.use_id].camog.size() - 1;
 							}
 							else {
 								--veh.camo_sel;
@@ -333,22 +333,22 @@ public:
 							fps);
 						easing_set(&camaim, pos + VGet((float(-200 + GetRand(400)) / 100.f) * (1.f - (pos.z() / -120.f)), (float(-200 + GetRand(400)) / 100.f) * (1.f - (pos.z() / -120.f)) + 3.f, (float(-200 + GetRand(400)) / 100.f) * (1.f - (pos.z() / -120.f))), 0.95f, fps);
 					}
-					if (p[veh.use_id].camog.size() > 0) {
+					if ((*vehcs)[1][veh.use_id].camog.size() > 0) {
 						SetDrawScreen(CamScreen.get());
-						DrawExtendGraph(0, 0, 240, 240, p[veh.use_id].camog[veh.camo_sel], TRUE);
-						MV1SetTextureGraphHandle(p[veh.use_id].obj.get(), p[veh.use_id].camo_tex, p[veh.use_id].camog[veh.camo_sel], TRUE);
+						DrawExtendGraph(0, 0, 240, 240, (*vehcs)[1][veh.use_id].camog[veh.camo_sel], TRUE);
+						MV1SetTextureGraphHandle((*vehcs)[1][veh.use_id].obj.get(), (*vehcs)[1][veh.use_id].camo_tex, (*vehcs)[1][veh.use_id].camog[veh.camo_sel], TRUE);
 					}
 					GraphFilter(CamScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 2400);
 					if (veh.camo_sel != old) {
 						if (std::abs(int(int(veh.camo_sel) - old)) == 1) {
-							rad_i += 360 * int(int(veh.camo_sel) - old) / int(p[veh.use_id].camog.size());
+							rad_i += 360 * int(int(veh.camo_sel) - old) / int((*vehcs)[1][veh.use_id].camog.size());
 						}
 						else {
 							if (veh.camo_sel == 0) {
-								rad_i += 360 / int(p[veh.use_id].camog.size());
+								rad_i += 360 / int((*vehcs)[1][veh.use_id].camog.size());
 							}
 							else {
-								rad_i -= 360 / int(p[veh.use_id].camog.size());
+								rad_i -= 360 / int((*vehcs)[1][veh.use_id].camog.size());
 							}
 						}
 					}
@@ -373,11 +373,11 @@ public:
 
 						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 0, 0), TRUE);
 
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3), GetColor(0, 255, 0), "Name     :%s", p[veh.use_id].name.c_str());
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 20), GetColor(0, 255, 0), "MaxSpeed :%03.0f km/h", p[veh.use_id].max_speed_limit*3.6f);
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 40), GetColor(0, 255, 0), "MidSpeed :%03.0f km/h", p[veh.use_id].mid_speed_limit*3.6f);
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 60), GetColor(0, 255, 0), "MinSpeed :%03.0f km/h", p[veh.use_id].min_speed_limit*3.6f);
-						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 80), GetColor(0, 255, 0), "Turn     :%03.0f °/s", p[veh.use_id].body_rad_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3), GetColor(0, 255, 0), "Name     :%s", (*vehcs)[1][veh.use_id].name.c_str());
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 20), GetColor(0, 255, 0), "MaxSpeed :%03.0f km/h", (*vehcs)[1][veh.use_id].max_speed_limit*3.6f);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 40), GetColor(0, 255, 0), "MidSpeed :%03.0f km/h", (*vehcs)[1][veh.use_id].mid_speed_limit*3.6f);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 60), GetColor(0, 255, 0), "MinSpeed :%03.0f km/h", (*vehcs)[1][veh.use_id].min_speed_limit*3.6f);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 80), GetColor(0, 255, 0), "Turn     :%03.0f °/s", (*vehcs)[1][veh.use_id].body_rad_limit);
 
 						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 255, 0), FALSE);
 						font12.DrawString(xp - y_r(120), yp - y_r(60 + 15), "Spec", GetColor(0, 255, 0));
@@ -390,16 +390,16 @@ public:
 						int ya = out_dispy * 2 / 3 + int((ber_r - y_r(150)) * cos(rad + deg2rad(180)));
 						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
-						int ys = 20 * int(p[veh.use_id].gunframe.size()) / 2 + 1;
+						int ys = 20 * int((*vehcs)[1][veh.use_id].gunframe.size()) / 2 + 1;
 
 						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 0, 0), TRUE);
 
-						if (p[veh.use_id].gunframe.size() == 0) {
+						if ((*vehcs)[1][veh.use_id].gunframe.size() == 0) {
 							font18.DrawString(xp - y_r(120 - 3), yp - y_r(ys - 3), "N/A", GetColor(0, 255, 0));
 						}
 						else {
-							for (int z = 0; z < p[veh.use_id].gunframe.size(); z++) {
-								font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(ys - 3 - 20 * z), GetColor(0, 255, 0), "No.%d  :%s", z, p[veh.use_id].gunframe[z].name.c_str());
+							for (int z = 0; z < (*vehcs)[1][veh.use_id].gunframe.size(); z++) {
+								font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(ys - 3 - 20 * z), GetColor(0, 255, 0), "No.%d  :%s", z, (*vehcs)[1][veh.use_id].gunframe[z].name.c_str());
 							}
 						}
 						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 255, 0), FALSE);
@@ -415,11 +415,14 @@ public:
 						SetUseLighting(TRUE);
 						SetFogEnable(TRUE);
 					}
+
+					easing_set(&rad, deg2rad(rad_i + yrad_im), 0.9f, fps);
+
 					GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 3.0f, 150.f, fov, campos, camaim, VGet(0.f, 1.f, 0.f));
 					{
 						SkyScreen.DrawGraph(0, 0, false);
-						p[veh.use_id].obj.SetMatrix(MATRIX_ref::Mtrans(pos));
-						p[veh.use_id].obj.DrawModel();
+						(*vehcs)[1][veh.use_id].obj.SetMatrix(MATRIX_ref::Mtrans(pos));
+						(*vehcs)[1][veh.use_id].obj.DrawModel();
 					}
 					SetDrawBlendMode(DX_BLENDMODE_ALPHA, std::clamp(255 - int(255.f * pos.z() / -10.f), 0, 255));
 					bufScreen.DrawGraph(0, 0, true);
@@ -437,7 +440,155 @@ public:
 						endp = true;
 					}
 				}
+				if (chara->mode == 2) {
+					if (CheckHitKey(KEY_INPUT_SPACE) != 0 || speed != 0.f) {
+						speed = std::clamp(speed + 0.25f / 3.6f / fps, 0.f, 15.f / 3.6f / fps);
+						pos.zadd(-speed);
+						startp = true;
+					}
+					auto old = veh.camo_sel;
+					if (!startp) {
+						easing_set(&campos, (MATRIX_ref::RotY(yrad_m) * MATRIX_ref::RotX(std::clamp(xrad_m, deg2rad(10), deg2rad(30)))).zvec() * (-150.f) + VGet(0.f, 30.f, 0.f), 0.95f, fps);
+						camaim = pos + VGet(0.f, 3.f, 0.f);
+						if (upct == 1) {
+							++veh.use_id %= (*vehcs)[2].size();
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[2][veh.use_id].camog.size() - 1);
+						}
+						if (dnct == 1) {
+							if (veh.use_id == 0) {
+								veh.use_id = (*vehcs)[2].size() - 1;
+							}
+							else {
+								--veh.use_id;
+							}
+							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[2][veh.use_id].camog.size() - 1);
+						}
+						if (ltct == 1) {
+							++veh.camo_sel %= (*vehcs)[2][veh.use_id].camog.size();
+						}
+						if (rtct == 1) {
+							if (veh.camo_sel == 0) {
+								veh.camo_sel = (*vehcs)[2][veh.use_id].camog.size() - 1;
+							}
+							else {
+								--veh.camo_sel;
+							}
+						}
+					}
+					else {
+						easing_set(&campos, VGet(32.5f, 30.f, 75.f), 0.95f, fps);
+						camaim = pos + VGet(0.f, 3.f, 0.f);
+					}
+					if ((*vehcs)[2][veh.use_id].camog.size() > 0) {
+						SetDrawScreen(CamScreen.get());
+						DrawExtendGraph(0, 0, 240, 240, (*vehcs)[2][veh.use_id].camog[veh.camo_sel], TRUE);
+						MV1SetTextureGraphHandle((*vehcs)[2][veh.use_id].obj.get(), (*vehcs)[2][veh.use_id].camo_tex, (*vehcs)[2][veh.use_id].camog[veh.camo_sel], TRUE);
+					}
+					GraphFilter(CamScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 2400);
+					if (veh.camo_sel != old) {
+						if (std::abs(int(int(veh.camo_sel) - old)) == 1) {
+							rad_i += 360 * int(int(veh.camo_sel) - old) / int((*vehcs)[2][veh.use_id].camog.size());
+						}
+						else {
+							if (veh.camo_sel == 0) {
+								rad_i += 360 / int((*vehcs)[2][veh.use_id].camog.size());
+							}
+							else {
+								rad_i -= 360 / int((*vehcs)[2][veh.use_id].camog.size());
+							}
+						}
+					}
+					bufScreen.SetDraw_Screen();
+					{
+						int xp = out_dispx / 2 + int((ber_r * 16.f / 9.f) * sin(rad));
+						int yp = out_dispy * 2 / 3 + int(ber_r * cos(rad));
+						int xa = out_dispx / 2 + int(((ber_r * 16.f / 9.f) - y_r(150)) * sin(rad));
+						int ya = out_dispy * 2 / 3 + int((ber_r - y_r(150)) * cos(rad));
+						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						CamScreen.DrawExtendGraph(xp - y_r(60), yp - y_r(60), xp + y_r(60), yp + y_r(60), true);
+						DrawBox(xp - y_r(60), yp - y_r(60), xp + y_r(60), yp + y_r(60), GetColor(0, 255, 0), FALSE);
+						font12.DrawString(xp - y_r(60), yp - y_r(60 + 15), "Camo", GetColor(0, 255, 0));
+					}
 
+					{
+						int xp = out_dispx / 2 + int((ber_r * 16.f / 9.f) * sin(rad + deg2rad(90)));
+						int yp = out_dispy * 2 / 3 + int(ber_r * cos(rad + deg2rad(90)));
+						int xa = out_dispx / 2 + int(((ber_r * 16.f / 9.f) - y_r(150)) * sin(rad + deg2rad(90)));
+						int ya = out_dispy * 2 / 3 + int((ber_r - y_r(150)) * cos(rad + deg2rad(90)));
+						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+
+						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 0, 0), TRUE);
+
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3), GetColor(0, 255, 0), "Name  :%s", (*vehcs)[2][veh.use_id].name.c_str());
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 20), GetColor(0, 255, 0), "Speed :%03.0f/%03.0f km/h", (*vehcs)[2][veh.use_id].flont_speed_limit, (*vehcs)[2][veh.use_id].back_speed_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 40), GetColor(0, 255, 0), "Turn  :%03.0f °/s", (*vehcs)[2][veh.use_id].body_rad_limit);
+						font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(60 - 3 - 60), GetColor(0, 255, 0), "Turret:%03.0f °/s", (*vehcs)[2][veh.use_id].turret_rad_limit);
+
+						DrawBox(xp - y_r(120), yp - y_r(60), xp + y_r(120), yp + y_r(60), GetColor(0, 255, 0), FALSE);
+						font12.DrawString(xp - y_r(120), yp - y_r(60 + 15), "Spec", GetColor(0, 255, 0));
+					}
+
+					{
+						int xp = out_dispx / 2 + int((ber_r * 16.f / 9.f) * sin(rad + deg2rad(180)));
+						int yp = out_dispy * 2 / 3 + int(ber_r * cos(rad + deg2rad(180)));
+						int xa = out_dispx / 2 + int(((ber_r * 16.f / 9.f) - y_r(150)) * sin(rad + deg2rad(180)));
+						int ya = out_dispy * 2 / 3 + int((ber_r - y_r(150)) * cos(rad + deg2rad(180)));
+						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+
+						int ys = 20 * int((*vehcs)[2][veh.use_id].gunframe.size()) / 2 + 1;
+
+						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 0, 0), TRUE);
+
+						if ((*vehcs)[2][veh.use_id].gunframe.size() == 0) {
+							font18.DrawString(xp - y_r(120 - 3), yp - y_r(ys - 3), "N/A", GetColor(0, 255, 0));
+						}
+						else {
+							for (int z = 0; z < (*vehcs)[2][veh.use_id].gunframe.size(); z++) {
+								font18.DrawStringFormat(xp - y_r(120 - 3), yp - y_r(ys - 3 - 20 * z), GetColor(0, 255, 0), "No.%d  :%s", z, (*vehcs)[2][veh.use_id].gunframe[z].name.c_str());
+							}
+						}
+						DrawBox(xp - y_r(120), yp - y_r(ys), xp + y_r(120), yp + y_r(ys), GetColor(0, 255, 0), FALSE);
+						font12.DrawString(xp - y_r(120), yp - y_r(ys + 15), "Weapon", GetColor(0, 255, 0));
+					}
+
+					easing_set(&rad, deg2rad(rad_i + yrad_im), 0.9f, fps);
+
+					SkyScreen.SetDraw_Screen(1000.0f, 5000.0f, fov, campos - camaim, VGet(0, 0, 0), VGet(0.f, 1.f, 0.f));
+					{
+						SetFogEnable(FALSE);
+						SetUseLighting(FALSE);
+						sky.DrawModel();
+						SetUseLighting(TRUE);
+						SetFogEnable(TRUE);
+					}
+					GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 30.0f, 3000.f, fov, campos, camaim, VGet(0.f, 1.f, 0.f));
+					{
+						SkyScreen.DrawGraph(0, 0, false);
+						SetFogEnable(TRUE);
+						SetFogStartEnd(0.0f, 6000.f);
+						SetFogColor(128, 192, 255);
+						{
+							sea.SetPosition(VGet(campos.x(), 0.f, campos.z()));
+							sea.DrawModel();
+						}
+						SetFogStartEnd(0.0f, 3000.f);
+						SetFogColor(128, 128, 128);
+						(*vehcs)[2][veh.use_id].obj.SetMatrix(MATRIX_ref::RotX(deg2rad(speed / (60.f / 3.6f / fps) * 2.f)) * MATRIX_ref::Mtrans(pos));
+						(*vehcs)[2][veh.use_id].obj.DrawModel();
+						SetFogEnable(FALSE);
+					}
+					SetDrawBlendMode(DX_BLENDMODE_ALPHA, std::clamp(255 - int(255.f * pos.z() / -10.f), 0, 255));
+					bufScreen.DrawGraph(0, 0, true);
+					SetDrawBlendMode(DX_BLENDMODE_ALPHA, std::clamp(int(255.f * pos.z() / -30.f), 0, 255));
+					DrawBox(0, 0, out_dispx, out_dispy, GetColor(255, 255, 255), TRUE);
+					SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+					if (pos.z() < -10.f) {
+						easing_set(&fov, deg2rad(90 / 2) / 2.f, 0.95f, fps);
+					}
+					if (pos.z() < -30.f) {
+						endp = true;
+					}
+				}
 				ScreenFlip();
 				if (GetWaitVSyncFlag() == FALSE) {
 					while (GetNowHiPerformanceCount() - waits < 1000000.0f / 60.f) {
