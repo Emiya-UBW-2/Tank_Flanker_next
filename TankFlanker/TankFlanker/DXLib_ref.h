@@ -150,7 +150,7 @@ public:
 			}
 		}
 		*/
-		ScreenFlip();
+		Screen_Flip();
 		if (!use_vsync) {
 			while (GetNowHiPerformanceCount() - waits < 1000000.0f / frate) {}
 		}

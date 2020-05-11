@@ -57,11 +57,12 @@ private:
 		EffectS gndsmkeffcs;
 		float gndsmksize = 1.f;
 	};
-	struct Hit {							      /**/
-		bool flug{ false };					      /*弾痕フラグ*/
-		int use{ 0 };						      /*使用フレーム*/
-		MV1 pic;						      /*弾痕モデル*/
-		VECTOR_ref scale, pos, z_vec, y_vec;			      /*座標*/
+	struct Hit {		      /**/
+		bool flug{ false };   /*弾痕フラグ*/
+		int use{ 0 };	      /*使用フレーム*/
+		MV1 pic;	      /*弾痕モデル*/
+		VECTOR_ref pos;	      /*座標*/
+		MATRIX_ref mat;	      /**/
 	};								      /**/
 	struct b2Pats {
 		std::unique_ptr<b2Body> body;    /**/
@@ -69,11 +70,9 @@ private:
 		VECTOR_ref pos;/*仮*/
 	};
 	struct FootWorld {
-		b2World* world;		       /*足world*/
-		b2RevoluteJointDef f_jointDef; /*ジョイント*/
-		std::vector<b2Pats> Foot;      /**/
-		std::vector<b2Pats> Wheel;     /**/
-		std::vector<b2Pats> Yudo;      /**/
+		b2World* world;			     /*足world*/
+		b2RevoluteJointDef f_jointDef;	     /*ジョイント*/
+		std::vector<b2Pats> Foot,Wheel,Yudo; /**/
 	};
 	struct burners {			    /**/
 		frames frame;			    /**/
@@ -723,7 +722,7 @@ private:
 		float zrad = 0.f, zradadd = 0.f, zradadd_left = 0.f, zradadd_right = 0.f; /**/
 		std::vector<MV1_COLL_RESULT_POLY> hitres;			      /*確保*/
 		std::vector<int16_t> HP_m;					      /*ライフ*/
-		std::array<Hit, 24> hit;					      /*弾痕*/
+		std::array<Hit, 24> hit_obj;					      /*弾痕*/
 		size_t camo_sel = 0;						      /**/
 		float wheel_Left = 0.f, wheel_Right = 0.f;			      //転輪回転
 		std::vector<pair_hit> hitssort;					      /*フレームに当たった順番*/
@@ -754,16 +753,13 @@ private:
 			this->zradadd = 0.f;
 			this->zradadd_left = 0.f;
 			this->zradadd_right = 0.f;
-			for (auto& h : this->hit) {
+			for (auto& h : this->hit_obj) {
 				h.flug = false;
 				h.use = 0;
 				h.pic.Dispose();
-				h.scale = VGet(1.f, 1.f, 1.f);
 				h.pos = VGet(0, 0, 0);
-				h.y_vec = VGet(0, 1.f, 0);
-				h.z_vec = VGet(0, 0, 1.f);
+				h.mat = MGetIdent();
 			}
-
 			//this->use_veh;
 			for (auto& g : this->Gun_) {
 				g.fired = 0.f;
@@ -857,11 +853,11 @@ public:
 						veh.hitres.resize(veh.col.mesh_num());   //モジュールごとの当たり判定結果を確保
 						veh.hitssort.resize(veh.col.mesh_num()); //モジュールごとの当たり判定順序を確保
 						//弾痕
-						for (auto& h : veh.hit) {
+						for (auto& h : veh.hit_obj) {
 							h.flug = false;
 							h.pic = hit_pic.Duplicate();
 							h.use = 0;
-							h.scale = VGet(1.f, 1.f, 1.f);
+							h.mat = MGetIdent();
 							h.pos = VGet(0.f, 0.f, 0.f);
 						}
 						for (int j = 0; j < veh.obj.material_num(); ++j) {
@@ -1124,7 +1120,7 @@ public:
 												c.vec = c.vec.Norm();
 												c.pos = c.vec * (0.1f) + position;
 												//弾痕
-												veh.hit[t.hitbuf].use = 0;
+												veh.hit_obj[t.hitbuf].use = 0;
 											}
 											else {
 												//はじく
@@ -1134,7 +1130,7 @@ public:
 												c.pos = c.vec * (0.1f) + position;
 												c.spec.pene_a /= 2.0f;
 												//弾痕
-												veh.hit[t.hitbuf].use = 1;
+												veh.hit_obj[t.hitbuf].use = 1;
 											}
 											if (c.spec.caliber_a >= 0.020f) {
 												set_effect(&this->effcs[ef_reco], c.pos, normal);
@@ -1146,12 +1142,14 @@ public:
 											//弾痕のセット
 											{
 												float asize = c.spec.caliber_a * 100.f;
-												veh.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
-												veh.hit[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].flug = true;
-												++t.hitbuf %= veh.hit.size();
+												auto scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
+												auto y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+												auto z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+
+												veh.hit_obj[t.hitbuf].mat = MATRIX_ref::Scale(scale)* MATRIX_ref::Axis1(y_vec.cross(z_vec), y_vec, z_vec);
+												veh.hit_obj[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180))) + y_vec * 0.02f;
+												veh.hit_obj[t.hitbuf].flug = true;
+												++t.hitbuf %= veh.hit_obj.size();
 											}
 										}
 										break;
@@ -1211,7 +1209,7 @@ public:
 												c.vec = c.vec.Norm();
 												c.pos = c.vec * (0.1f) + position;
 												//弾痕
-												veh.hit[t.hitbuf].use = 0;
+												veh.hit_obj[t.hitbuf].use = 0;
 											}
 											else {
 												//爆発する
@@ -1221,7 +1219,7 @@ public:
 												c.vec = c.vec.Norm();
 												c.pos = c.vec * (0.1f) + position;
 												//弾痕
-												veh.hit[t.hitbuf].use = 1;
+												veh.hit_obj[t.hitbuf].use = 1;
 											}
 											if (c.spec.caliber_a >= 0.020f) {
 												set_effect(&this->effcs[ef_reco], c.pos, normal);
@@ -1233,12 +1231,14 @@ public:
 											//弾痕のセット
 											{
 												float asize = c.spec.caliber_a * 100.f;
-												veh.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
-												veh.hit[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].flug = true;
-												++t.hitbuf %= veh.hit.size();
+												auto scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
+												auto y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+												auto z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+
+												veh.hit_obj[t.hitbuf].mat = MATRIX_ref::Scale(scale)* MATRIX_ref::Axis1(y_vec.cross(z_vec), y_vec, z_vec);
+												veh.hit_obj[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180))) + y_vec * 0.02f;
+												veh.hit_obj[t.hitbuf].flug = true;
+												++t.hitbuf %= veh.hit_obj.size();
 											}
 										}
 										break;
@@ -1299,7 +1299,7 @@ public:
 												c.vec = c.vec.Norm();
 												c.pos = c.vec * (0.1f) + position;
 												//弾痕
-												veh.hit[t.hitbuf].use = 0;
+												veh.hit_obj[t.hitbuf].use = 0;
 											}
 											else {
 												//爆発する
@@ -1309,7 +1309,7 @@ public:
 												c.vec = c.vec.Norm();
 												c.pos = c.vec * (0.1f) + position;
 												//弾痕
-												veh.hit[t.hitbuf].use = 1;
+												veh.hit_obj[t.hitbuf].use = 1;
 											}
 											if (c.spec.caliber_a >= 0.020f) {
 												set_effect(&this->effcs[ef_reco], c.pos, normal);
@@ -1321,12 +1321,14 @@ public:
 											//弾痕のセット
 											{
 												float asize = c.spec.caliber_a * 100.f;
-												veh.hit[t.hitbuf].scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
-												veh.hit[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
-												veh.hit[t.hitbuf].flug = true;
-												++t.hitbuf %= veh.hit.size();
+												auto scale = VGet(asize / std::abs(c.vec.Norm().dot(normal)), asize, asize);
+												auto y_vec = MATRIX_ref::Vtrans(normal, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+												auto z_vec = MATRIX_ref::Vtrans(normal.cross(c.vec), veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180)));
+
+												veh.hit_obj[t.hitbuf].mat = MATRIX_ref::Scale(scale)* MATRIX_ref::Axis1(y_vec.cross(z_vec), y_vec, z_vec);
+												veh.hit_obj[t.hitbuf].pos = MATRIX_ref::Vtrans(position - veh.pos, veh.mat.Inverse() * MATRIX_ref::RotY(deg2rad(180))) + y_vec * 0.02f;
+												veh.hit_obj[t.hitbuf].flug = true;
+												++t.hitbuf %= veh.hit_obj.size();
 											}
 										}
 										break;
