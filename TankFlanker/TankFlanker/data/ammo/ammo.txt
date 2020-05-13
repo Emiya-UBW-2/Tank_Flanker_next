@@ -24,7 +24,7 @@ type       =0
 caliber    =0.100
 penetration=175
 speed      =887
-damage     =6
+damage     =10
 
 name       =USSR 12.7
 type       =1

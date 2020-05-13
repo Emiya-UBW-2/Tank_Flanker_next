@@ -25,8 +25,8 @@ public:
 private:
 	bool use_vr = true;
 
-	vr::IVRSystem* m_pHMD;
-	vr::EVRInitError eError;
+	vr::IVRSystem* m_pHMD=nullptr;
+	vr::EVRInitError eError = vr::VRInitError_None;
 	std::vector<systems> ctrl;							/*HMD,controller*/
 	float fov = 90.f;
 	char deviceall = 0;

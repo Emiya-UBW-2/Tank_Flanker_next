@@ -70,14 +70,10 @@ private:
 		VECTOR_ref pos;/*仮*/
 	};
 	struct FootWorld {
-		b2World* world;			     /*足world*/
+		b2World* world=nullptr;			     /*足world*/
 		b2RevoluteJointDef f_jointDef;	     /*ジョイント*/
 		std::vector<b2Pats> Foot,Wheel,Yudo; /**/
 	};
-	struct burners {			    /**/
-		frames frame;			    /**/
-		MV1 effectobj;			    /**/
-	};					    /**/
 public:
 	//弾薬
 	class Ammos {
@@ -133,6 +129,8 @@ public:
 		float body_rad_limit = 0.f;			  /*旋回速度(度/秒)*/
 		float turret_rad_limit = 0.f;			  /*砲塔駆動速度(度/秒)*/
 		frames fps_view;//コックピット
+		GraphHandle ui_pic;//シルエット
+		int pic_x, pic_y;//サイズ
 		//専門
 		std::array<int, 4> square{ 0 };//車輛の四辺
 		std::array<std::vector<frames>, 2> b2upsideframe; /*履帯上*/
@@ -183,6 +181,9 @@ public:
 			this->wire = t.wire;
 			this->catapult = t.catapult;
 
+			this->ui_pic = t.ui_pic.Duplicate();
+			this->pic_x = t.pic_x;
+			this->pic_y = t.pic_y;
 		}
 		//事前読み込み
 		static void set_vehicles_pre(const char* name, std::vector<Mainclass::Vehcs>* veh_, const bool& Async) {
@@ -201,6 +202,7 @@ public:
 			for (auto& t : *veh_) {
 				MV1::Load(std::string(name) + t.name + "/model.mv1", &t.obj, Async);
 				MV1::Load(std::string(name) + t.name + "/col.mv1", &t.col, Async);
+				t.ui_pic = GraphHandle::Load(std::string(name) + t.name + "/pic.png");
 			}
 		}
 		//メイン読み込み
@@ -212,6 +214,8 @@ public:
 				for (auto& t : veh) {
 					//αテスト
 					t.obj.material_AlphaTestAll(true, DX_CMP_GREATER, 128);
+					//
+					GetGraphSize(t.ui_pic.get(), &t.pic_x, &t.pic_y);
 				}
 			}
 			//固有
@@ -725,6 +729,7 @@ private:
 		std::array<Hit, 24> hit_obj;					      /*弾痕*/
 		size_t camo_sel = 0;						      /**/
 		float wheel_Left = 0.f, wheel_Right = 0.f;			      //転輪回転
+		float wheel_Leftadd = 0.f, wheel_Rightadd = 0.f;		      //転輪回転
 		std::vector<pair_hit> hitssort;					      /*フレームに当たった順番*/
 	public:
 		void reset() {
@@ -741,6 +746,8 @@ private:
 			this->HP_m.clear();
 			this->wheel_Left = 0.f;
 			this->wheel_Right = 0.f;
+			this->wheel_Leftadd = 0.f;
+			this->wheel_Rightadd = 0.f;
 			this->xrad = 0.f;
 			this->xradadd = 0.f;
 			this->xradadd_left = 0.f;
@@ -825,13 +832,13 @@ public:
 		switchs landing = { false, uint8_t(0) }; //着艦フックスイッチ
 		float p_landing_per = 0.f;		    //着艦フック
 		std::array<p_animes, 6> p_animes_rudder;      //ラダーアニメーション
-		std::vector<burners> p_burner;		    //バーナー
+		std::vector<frames> p_burner;		    //バーナー
 		//共通項//==================================================
 		std::array<vehicles, veh_all> vehicle; //0=戦車,1=飛行機
 
 		//セット
 		template <size_t N>
-		void set_human(const std::array<std::vector<Mainclass::Vehcs>, N>& vehcs, const std::vector<Ammos>& Ammo_, const MV1& hit_pic, std::unique_ptr<b2World>& world, const MV1& plane_effect) {
+		void set_human(const std::array<std::vector<Mainclass::Vehcs>, N>& vehcs, const std::vector<Ammos>& Ammo_, const MV1& hit_pic, std::unique_ptr<b2World>& world) {
 			auto& c = *this;
 			{
 				std::fill(c.key.begin(), c.key.end(), false); //操作
@@ -845,6 +852,7 @@ public:
 						veh.use_veh.into(vehcs[i][veh.use_id]);
 						veh.obj = vehcs[i][veh.use_id].obj.Duplicate();
 						veh.col = vehcs[i][veh.use_id].col.Duplicate();
+
 						i++;
 						//コリジョン
 						for (int j = 0; j < veh.col.mesh_num(); j++) {
@@ -1020,13 +1028,8 @@ public:
 						}
 					}
 					//エフェクト
-					{
-						//plane_effect
-						for (auto& be : veh.use_veh.burner) {
-							c.p_burner.resize(c.p_burner.size() + 1);
-							c.p_burner.back().frame = be;
-							c.p_burner.back().effectobj = plane_effect.Duplicate();
-						}
+					for (auto& be : veh.use_veh.burner) {
+						c.p_burner.emplace_back(be);
 					}
 					c.changegear.first = true;
 					c.changegear.second = 2;
