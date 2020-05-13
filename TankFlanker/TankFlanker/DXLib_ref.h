@@ -161,4 +161,14 @@ public:
 		ScreenFlip();
 		return true;
 	}
+
+
+	static bool Capsule3D(const VECTOR_ref& p1, const VECTOR_ref& p2, const float& range, const unsigned int& color, const unsigned int& speccolor) {
+		return DxLib::DrawCapsule3D(p1.get(), p2.get(), range, 8, color, speccolor, TRUE) == TRUE;
+	}
+
+	static bool Line2D(const int& p1x, const int& p1y, const int& p2x, const int& p2y, const unsigned int& color, const int& thickness=1) {
+		return DxLib::DrawLine(p1x,p1y,p2x,p2y,color,thickness) == TRUE;
+	}
+
 };

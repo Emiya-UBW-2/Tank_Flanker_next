@@ -23,21 +23,24 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 		shadow_e = getparam_bool(mdata);
 		useVR_e = getparam_bool(mdata);
 		FileRead_close(mdata);
-		if (useVR_e) {
-			dispx = 1080;
-			dispy = 1200;
-			out_dispx = dispx * 960 / dispy;
-			out_dispy = dispy * 960 / dispy;
-		}
-		else {
-			dispx = 1920;
-			dispy = 1080;
-			out_dispx = dispx;
-			out_dispy = dispy;
-		}
 	}
+	//DXLib描画
+	auto vrparts = std::make_unique<VRDraw>(&useVR_e);
+	//画面指定
+	if (useVR_e) {
+		dispx = 1080;
+		dispy = 1200;
+		out_dispx = dispx * 960 / dispy;
+		out_dispy = dispy * 960 / dispy;
+	}
+	else {
+		dispx = 1920;
+		dispy = 1080;
+		out_dispx = dispx;
+		out_dispy = dispy;
+	}
+	//
 	auto Drawparts = std::make_unique<DXDraw>("TankFlanker", dispx, dispy, 90.f);		 /*汎用クラス*/
-	auto vrparts = std::make_unique<VRDraw>(useVR_e);					 /*演算クラス*/
 	auto UIparts = std::make_unique<UI>(out_dispx, out_dispy, dispx, dispy);		 /*UI*/
 	auto Debugparts = std::make_unique<DeBuG>(90);						 /*デバッグ*/
 	auto Hostpassparts = std::make_unique<HostPassEffect>(dof_e, bloom_e, dispx, dispy);	 /*ホストパスエフェクト*/
@@ -279,7 +282,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				}
 			}
 		};
-		auto draw_on_shadow = [&mapparts, &chara, &ads, &tree, &campos, &vrparts] {
+		auto draw_on_shadow = [&mapparts, &chara, &ads, &tree, &campos, &vrparts,&ratio] {
 			//マップ
 			SetFogStartEnd(0.0f, 3000.f);
 			SetFogColor(128, 128, 128);
@@ -330,7 +333,11 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 					for (auto& g : veh.Gun_) {
 						for (auto& a : g.bullet) {
 							if (a.flug) {
-								DrawCapsule3D(a.pos.get(), a.repos.get(), ((a.spec.caliber_a - 0.00762f) * 0.1f + 0.00762f) * ((a.pos - campos).size() / 24.f), 4, a.color, GetColor(255, 255, 255), TRUE);
+								DXDraw::Capsule3D(
+									a.pos,
+									a.repos,
+									(((a.spec.caliber_a - 0.00762f) * 0.1f + 0.00762f) * ((a.pos - campos).size() / 24.f))*(1.f / std::max(ratio / 8.5f, 1.f)),
+									a.color, GetColor(255, 255, 255));
 							}
 						}
 					}

@@ -43,12 +43,16 @@ public:
 	const auto& get_m_pHMD(void) { return m_pHMD; }
 	const auto& get_eError(void) { return vr::VR_GetVRInitErrorAsSymbol(eError); }
 	auto* get_device(void) { return &ctrl; }
-	VRDraw(const bool& usevr) {
-		use_vr = usevr;
+	VRDraw(bool* usevr) {
+		use_vr = *usevr;
 		if (use_vr) {
 			eError = vr::VRInitError_None;
 			m_pHMD = vr::VR_Init(&eError, vr::VRApplication_Scene);
-			if (eError != vr::VRInitError_None) { m_pHMD = 0; }
+			if (eError != vr::VRInitError_None) {
+				m_pHMD = 0;
+				use_vr = false;
+				*usevr = false;
+			}
 		}
 	}
 	~VRDraw(void) {

@@ -197,8 +197,9 @@ public:
 						camaim = pos + VGet(0.f, 3.f, 0.f);
 					}
 					if ((*vehcs)[0][veh.use_id].camog.size() > 0) {
-						SetDrawScreen(CamScreen.get());
-						DrawExtendGraph(0, 0, 240, 240, (*vehcs)[0][veh.use_id].camog[veh.camo_sel], TRUE);
+						CamScreen.SetDraw_Screen();
+						DrawExtendGraph(0, 0, 240, 240, (*vehcs)[0][veh.use_id].camog[veh.camo_sel], TRUE);//<=
+
 						MV1SetTextureGraphHandle((*vehcs)[0][veh.use_id].obj.get(), (*vehcs)[0][veh.use_id].camo_tex, (*vehcs)[0][veh.use_id].camog[veh.camo_sel], TRUE);
 					}
 					GraphFilter(CamScreen.get(), DX_GRAPH_FILTER_GAUSS, 16, 2400);
@@ -221,7 +222,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 						CamScreen.DrawExtendGraph(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), true);
 						DrawBox(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 255, 0), FALSE);
 						font12.DrawString(xp - y_r(60, out_disp_y), yp - y_r(60 + 15, out_disp_y), "Camo", GetColor(0, 255, 0));
@@ -232,7 +233,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(90)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(90)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(90)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						DrawBox(xp - y_r(120, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(120, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 0, 0), TRUE);
 
@@ -250,7 +251,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(180)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(180)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(180)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						int ys = 20 * int((*vehcs)[0][veh.use_id].gunframe.size()) / 2 + 1;
 
@@ -371,7 +372,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 						CamScreen.DrawExtendGraph(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), true);
 						DrawBox(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 255, 0), FALSE);
 						font12.DrawString(xp - y_r(60, out_disp_y), yp - y_r(60 + 15, out_disp_y), "Camo", GetColor(0, 255, 0));
@@ -382,7 +383,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(90)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(90)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(90)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						DrawBox(xp - y_r(120, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(120, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 0, 0), TRUE);
 
@@ -401,7 +402,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(180)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(180)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(180)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						int ys = 20 * int((*vehcs)[1][veh.use_id].gunframe.size()) / 2 + 1;
 
@@ -517,7 +518,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 						CamScreen.DrawExtendGraph(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), true);
 						DrawBox(xp - y_r(60, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(60, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 255, 0), FALSE);
 						font12.DrawString(xp - y_r(60, out_disp_y), yp - y_r(60 + 15, out_disp_y), "Camo", GetColor(0, 255, 0));
@@ -528,7 +529,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(90)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(90)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(90)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						DrawBox(xp - y_r(120, out_disp_y), yp - y_r(60, out_disp_y), xp + y_r(120, out_disp_y), yp + y_r(60, out_disp_y), GetColor(0, 0, 0), TRUE);
 
@@ -546,7 +547,7 @@ public:
 						int yp = out_disp_y * 2 / 3 + int(ber_r * cos(rad + deg2rad(180)));
 						int xa = out_disp_x / 2 + int(((ber_r * 16.f / 9.f) - y_r(150, out_disp_y)) * sin(rad + deg2rad(180)));
 						int ya = out_disp_y * 2 / 3 + int((ber_r - y_r(150, out_disp_y)) * cos(rad + deg2rad(180)));
-						DrawLine(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
+						DXDraw::Line2D(xa, ya, xp, yp, GetColor(0, 255, 0), 2);
 
 						int ys = 20 * int((*vehcs)[2][veh.use_id].gunframe.size()) / 2 + 1;
 
@@ -875,14 +876,14 @@ public:
 				int xp = disp_x / 2 + ys / 2;
 				int yp = disp_y / 2 - ys / 2;
 				int y_pos = int(float(ys / 4) * std::clamp(vr_sys.yvec.y() / sin(deg2rad(20)), -2.f, 2.f));
-				DrawLine(xp, yp, xp, yp + ys, GetColor(0, 0, 0), 5);
-				DrawLine(xp, yp + ys / 2 - (ys / 4), xp, yp + ys / 2 + (ys / 4), GetColor(255, 255, 255), 2);
-				DrawLine(xp, yp, xp, yp + ys / 2 - (ys / 4), GetColor(255, 0, 0), 2);
-				DrawLine(xp, yp + ys / 2 + (ys / 4), xp, yp + ys, GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp, yp, xp, yp + ys, GetColor(0, 0, 0), 5);
+				DXDraw::Line2D(xp, yp + ys / 2 - (ys / 4), xp, yp + ys / 2 + (ys / 4), GetColor(255, 255, 255), 2);
+				DXDraw::Line2D(xp, yp, xp, yp + ys / 2 - (ys / 4), GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp, yp + ys / 2 + (ys / 4), xp, yp + ys, GetColor(255, 0, 0), 2);
 
-				DrawLine(xp - 5, yp + ys / 2 + y_pos, xp + 5, yp + ys / 2 + y_pos, GetColor(255, 255, 0), 2);
-				DrawLine(xp - 5, yp + ys / 2 - (ys / 4), xp + 5, yp + ys / 2 - (ys / 4), GetColor(0, 255, 0), 2);
-				DrawLine(xp - 5, yp + ys / 2 + (ys / 4), xp + 5, yp + ys / 2 + (ys / 4), GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp - 5, yp + ys / 2 + y_pos, xp + 5, yp + ys / 2 + y_pos, GetColor(255, 255, 0), 2);
+				DXDraw::Line2D(xp - 5, yp + ys / 2 - (ys / 4), xp + 5, yp + ys / 2 - (ys / 4), GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp - 5, yp + ys / 2 + (ys / 4), xp + 5, yp + ys / 2 + (ys / 4), GetColor(0, 255, 0), 2);
 			}
 			//ロール
 			{
@@ -890,14 +891,14 @@ public:
 				int xp = disp_x / 2 - xs / 2;
 				int yp = disp_y / 2 + disp_y / 6 - y_r(240 / 2, out_disp_y);
 				int x_pos = int(float(xs / 4) * std::clamp(vr_sys.zvec.x() / sin(deg2rad(20)), -2.f, 2.f));
-				DrawLine(xp, yp, xp + xs, yp, GetColor(0, 0, 0), 5);
-				DrawLine(xp + xs / 2 - (xs / 4), yp, xp + xs / 2 + (xs / 4), yp, GetColor(255, 255, 255), 2);
-				DrawLine(xp, yp, xp + xs / 2 - (xs / 4), yp, GetColor(255, 0, 0), 2);
-				DrawLine(xp + xs / 2 + (xs / 4), yp, xp + xs, yp, GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp, yp, xp + xs, yp, GetColor(0, 0, 0), 5);
+				DXDraw::Line2D(xp + xs / 2 - (xs / 4), yp, xp + xs / 2 + (xs / 4), yp, GetColor(255, 255, 255), 2);
+				DXDraw::Line2D(xp, yp, xp + xs / 2 - (xs / 4), yp, GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + (xs / 4), yp, xp + xs, yp, GetColor(255, 0, 0), 2);
 
-				DrawLine(xp + xs / 2 + x_pos, yp - 5, xp + xs / 2 + x_pos, yp + 5, GetColor(255, 255, 0), 2);
-				DrawLine(xp + xs / 2 - (xs / 4), yp - 5, xp + xs / 2 - (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
-				DrawLine(xp + xs / 2 + (xs / 4), yp - 5, xp + xs / 2 + (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + x_pos, yp - 5, xp + xs / 2 + x_pos, yp + 5, GetColor(255, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 - (xs / 4), yp - 5, xp + xs / 2 - (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + (xs / 4), yp - 5, xp + xs / 2 + (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
 			}
 			//ヨー
 			{
@@ -908,14 +909,14 @@ public:
 				if ((vr_sys.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
 					x_pos = int(float(xs / 4) * std::clamp(vr_sys.touch.x() / 0.5f, -2.f, 2.f));
 				}
-				DrawLine(xp, yp, xp + xs, yp, GetColor(0, 0, 0), 5);
-				DrawLine(xp + xs / 2 - (xs / 4), yp, xp + xs / 2 + (xs / 4), yp, GetColor(255, 255, 255), 2);
-				DrawLine(xp, yp, xp + xs / 2 - (xs / 4), yp, GetColor(255, 0, 0), 2);
-				DrawLine(xp + xs / 2 + (xs / 4), yp, xp + xs, yp, GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp, yp, xp + xs, yp, GetColor(0, 0, 0), 5);
+				DXDraw::Line2D(xp + xs / 2 - (xs / 4), yp, xp + xs / 2 + (xs / 4), yp, GetColor(255, 255, 255), 2);
+				DXDraw::Line2D(xp, yp, xp + xs / 2 - (xs / 4), yp, GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + (xs / 4), yp, xp + xs, yp, GetColor(255, 0, 0), 2);
 
-				DrawLine(xp + xs / 2 + x_pos, yp - 5, xp + xs / 2 + x_pos, yp + 5, GetColor(255, 255, 0), 2);
-				DrawLine(xp + xs / 2 - (xs / 4), yp - 5, xp + xs / 2 - (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
-				DrawLine(xp + xs / 2 + (xs / 4), yp - 5, xp + xs / 2 + (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + x_pos, yp - 5, xp + xs / 2 + x_pos, yp + 5, GetColor(255, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 - (xs / 4), yp - 5, xp + xs / 2 - (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp + xs / 2 + (xs / 4), yp - 5, xp + xs / 2 + (xs / 4), yp + 5, GetColor(0, 255, 0), 2);
 			}
 			/*
 			if ((vr_sys.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
@@ -923,6 +924,27 @@ public:
 				mine.key[7] |= (vr_sys.touch.x() < -0.5f);
 			}
 			*/
+			//ピッチ
+			{
+				int ys = disp_y / 3 - y_r(240, out_disp_y);
+				int xp = disp_x / 2 - ys / 2;
+				int yp = disp_y / 2 - ys / 2;
+
+				int y_pos = 0;
+				if ((vr_sys.on[1] & vr::ButtonMaskFromId(vr::EVRButtonId::k_EButton_SteamVR_Touchpad)) != 0) {
+					y_pos = int(float(ys / 4) * std::clamp(vr_sys.touch.y() / 0.5f, -2.f, 2.f));
+				}
+
+				DXDraw::Line2D(xp, yp, xp, yp + ys, GetColor(0, 0, 0), 5);
+				DXDraw::Line2D(xp, yp + ys / 2 - (ys / 4), xp, yp + ys / 2 + (ys / 4), GetColor(255, 255, 255), 2);
+				DXDraw::Line2D(xp, yp, xp, yp + ys / 2 - (ys / 4), GetColor(255, 0, 0), 2);
+				DXDraw::Line2D(xp, yp + ys / 2 + (ys / 4), xp, yp + ys, GetColor(255, 0, 0), 2);
+
+				DXDraw::Line2D(xp - 5, yp + ys / 2 + y_pos, xp + 5, yp + ys / 2 + y_pos, GetColor(255, 255, 0), 2);
+				DXDraw::Line2D(xp - 5, yp + ys / 2 - (ys / 4), xp + 5, yp + ys / 2 - (ys / 4), GetColor(0, 255, 0), 2);
+				DXDraw::Line2D(xp - 5, yp + ys / 2 + (ys / 4), xp + 5, yp + ys / 2 + (ys / 4), GetColor(0, 255, 0), 2);
+			}
+
 		}
 	}
 

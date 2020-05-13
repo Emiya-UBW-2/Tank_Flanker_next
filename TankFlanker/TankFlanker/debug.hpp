@@ -43,18 +43,18 @@ public:
 		DrawBox(xpos, ypos, xpos + wide, ypos + hight * 100 / frate, GetColor(255, 0, 0), FALSE);
 		for (int j = 0; j < int(deb.size() - 1); ++j) {
 			for (int i = 0; i < 6; ++i) {
-				DrawLine(
+				DXDraw::Line2D(
 					xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][i + 1] * 5.f),
 					xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][i + 1] * 5.f),
 					GetColor(50, 128 + 127 * i / 6, 50));
 			}
-			DrawLine(
+			DXDraw::Line2D(
 				xpos + j * wide / frate, ypos + hight * 100 / frate - int(deb[j][0] * 5.f),
 				xpos + (j + 1) * wide / frate, ypos + hight * 100 / frate - int(deb[j + 1][0] * 5.f),
 				GetColor(255, 255, 0));
 		}
 		const auto c_ffffff = GetColor(255, 255, 255);
-		DrawLine(xpos, ypos + hight * 50 / frate, xpos + wide, ypos + hight * 50 / frate, GetColor(0, 255, 0));
+		DXDraw::Line2D(xpos, ypos + hight * 50 / frate, xpos + wide, ypos + hight * 50 / frate, GetColor(0, 255, 0));
 
 		font.DrawStringFormat(xpos, ypos, c_ffffff, "%05.2ffps ( %.2fms)", fps, time);
 
