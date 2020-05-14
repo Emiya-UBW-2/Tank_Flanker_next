@@ -28,7 +28,10 @@ private:
 	MV1 sea;
 	GraphHandle SkyScreen;
 	//コックピット
-	frames stickx_f, sticky_f, stickz_f, compass_f;
+	frames	stickx_f, sticky_f, stickz_f,
+		compass_f,
+		speed_f, spd3_f, spd2_f, spd1_f
+		;
 	VECTOR_ref cockpit_v;
 	MV1 cockpit;
 	GraphHandle cockpitScreen;
@@ -39,6 +42,7 @@ private:
 	int out_disp_y = 1080;
 	int disp_x = 1920;
 	int disp_y = 1080;
+	float ch_veh = 1.f;
 public:
 	UI(const int& o_xd, const int& o_yd, const int& xd, const int& yd) {
 		out_disp_x = o_xd;
@@ -73,6 +77,18 @@ public:
 			}
 			else if ((p.find("ペダル", 0) != std::string::npos) && (p.find("右", 0) == std::string::npos) && (p.find("左", 0) == std::string::npos)) {
 				sticky_f = { i,cockpit.frame(i) };
+			}
+			else if ((p.find("速度計", 0) != std::string::npos)) {
+				speed_f = { i,cockpit.frame(i) };
+			}
+			else if ((p.find("速度100", 0) != std::string::npos)) {
+				spd3_f = { i,cockpit.frame(i) };
+			}
+			else if ((p.find("速度010", 0) != std::string::npos)) {
+				spd2_f = { i,cockpit.frame(i) };
+			}
+			else if ((p.find("速度001", 0) != std::string::npos)) {
+				spd1_f = { i,cockpit.frame(i) };
 			}
 		}
 
@@ -463,7 +479,7 @@ public:
 					auto old = veh.camo_sel;
 					if (!startp) {
 						easing_set(&campos, (MATRIX_ref::RotY(yrad_m) * MATRIX_ref::RotX(std::clamp(xrad_m, deg2rad(10), deg2rad(30)))).zvec() * (-150.f) + VGet(0.f, 30.f, 0.f), 0.95f, fps);
-						camaim = pos + VGet(0.f, 3.f, 0.f);
+						camaim = pos + VGet(0.f, 30.f, 0.f);
 						if (upct == 1) {
 							++veh.use_id %= (*vehcs)[2].size();
 							veh.camo_sel = std::min(veh.camo_sel, (*vehcs)[2][veh.use_id].camog.size() - 1);
@@ -490,8 +506,8 @@ public:
 						}
 					}
 					else {
-						easing_set(&campos, VGet(32.5f, 30.f, 75.f), 0.95f, fps);
-						camaim = pos + VGet(0.f, 3.f, 0.f);
+						easing_set(&campos, VGet(32.5f, 30.f, 250.f), 0.95f, fps);
+						camaim = pos + VGet(0.f, 30.f, 0.f);
 					}
 					if ((*vehcs)[2][veh.use_id].camog.size() > 0) {
 						SetDrawScreen(CamScreen.get());
@@ -575,7 +591,7 @@ public:
 						SetUseLighting(TRUE);
 						SetFogEnable(TRUE);
 					}
-					GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 30.0f, 3000.f, fov, campos, camaim, VGet(0.f, 1.f, 0.f));
+					GraphHandle::SetDraw_Screen(DX_SCREEN_BACK, 10.0f, 3000.f, fov, campos, camaim, VGet(0.f, 1.f, 0.f));
 					{
 						SkyScreen.DrawGraph(0, 0, false);
 						SetFogEnable(TRUE);
@@ -648,6 +664,7 @@ public:
 			}
 		}
 	}
+
 	void draw(
 		const VECTOR_ref& aimpos,
 		const Mainclass::Chara& chara,
@@ -661,7 +678,8 @@ public:
 		const VECTOR_ref& camvec,
 		const VECTOR_ref& camup,
 		const VECTOR_ref& eye_pos_ads,
-		const bool& vr = false
+		const bool& vr = false,
+		const bool& chveh = false
 	) {
 		//コックピット
 		if (chara.mode == 1) {
@@ -679,6 +697,26 @@ public:
 				cockpit.SetFrameLocalMatrix(stickz_f.first, MATRIX_ref::RotZ(pz) * MATRIX_ref::Mtrans(stickz_f.second));
 				cockpit.SetFrameLocalMatrix(stickx_f.first, MATRIX_ref::RotX(px) * MATRIX_ref::Mtrans(stickx_f.second));
 				cockpit.SetFrameLocalMatrix(compass_f.first, MATRIX_ref(chara.vehicle[1].mat).Inverse() * MATRIX_ref::Mtrans(compass_f.second));
+				{
+					float spd_buf = chara.vehicle[1].speed*3.6f;
+					float spd = 0.f;
+					if (spd_buf <= 400.f) {
+						spd = 180.f*spd_buf / 440.f;
+					}
+					else {
+						spd = 180.f*(400.f / 440.f + (spd_buf - 400.f) / 880.f);
+					}
+					cockpit.frame_reset(speed_f.first);
+					cockpit.SetFrameLocalMatrix(speed_f.first, MATRIX_ref::RotAxis(MATRIX_ref::Vtrans(cockpit.frame(speed_f.first + 1) - cockpit.frame(speed_f.first), MATRIX_ref(chara.vehicle[1].mat).Inverse()), -deg2rad(spd)) *						MATRIX_ref::Mtrans(speed_f.second));
+				}
+				{
+					float spd_buf = chara.vehicle[1].speed*3.6f / 1224.f;
+
+					cockpit.SetFrameLocalMatrix(spd3_f.first, MATRIX_ref::RotX(-deg2rad(360.f / 10.f*spd_buf*1.f)) * MATRIX_ref::Mtrans(spd3_f.second));
+					cockpit.SetFrameLocalMatrix(spd2_f.first, MATRIX_ref::RotX(-deg2rad(360.f / 10.f*spd_buf*10.f)) * MATRIX_ref::Mtrans(spd2_f.second));
+					cockpit.SetFrameLocalMatrix(spd1_f.first, MATRIX_ref::RotX(-deg2rad(360.f / 10.f*spd_buf*100.f)) * MATRIX_ref::Mtrans(spd1_f.second));
+				}
+
 
 				cockpit.SetMatrix(MATRIX_ref::Mtrans((cockpit_v + eye_pos_ads)*-1.f)*(chara.vehicle[1].mat));
 				cockpit.DrawModel();
@@ -831,7 +869,20 @@ public:
 
 					//
 					if (!vr) {
-						DrawRotaGraph(xp, yp - y_r(60, out_disp_y), y_r(100.f*xs/ float(chara.vehicle[chara.mode].use_veh.pic_x),out_disp_x)/100.f, 0., chara.vehicle[chara.mode].use_veh.ui_pic.get(), TRUE);
+						if (chveh) {
+							ch_veh = 2.f;
+						}
+
+						SetDrawBlendMode(DX_BLENDMODE_ALPHA, std::clamp(int(255.f*ch_veh), 0, 255));
+						DrawRotaGraph(xp, yp - y_r(60, out_disp_y), y_r(100.f*xs / float(chara.vehicle[chara.mode].use_veh.pic_x), out_disp_x) / 100.f, 0., chara.vehicle[chara.mode].use_veh.ui_pic.get(), TRUE);
+						SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 255);
+
+						if (ch_veh > 1.f) {
+							ch_veh -= 1.f / fps;
+						}
+						else {
+							easing_set(&ch_veh, 0.f, 0.95f, fps);
+						}
 					}
 					for (int j = 0; j < chara.vehicle.size(); j++) {
 						auto& veh = chara.vehicle[j];

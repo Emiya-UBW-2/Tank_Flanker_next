@@ -69,6 +69,7 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 	float range = 0.f;
 	float range_p = 0.f;
 	uint8_t change_vehicle = 0;
+	bool chveh = false;
 
 	VECTOR_ref eye_pos_ads = VGet(0.f, 0.58f, 0.f);
 	//ロックオン
@@ -633,12 +634,14 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 						}
 					}
 					//他モードへの移行
+					chveh = false;
 					change_vehicle = std::clamp<uint8_t>(change_vehicle + 1, 0, int((CheckHitKey(KEY_INPUT_P) != 0) ? 2 : 0));
 					if (change_vehicle == 1) {
 						++mine.mode %= mine.vehicle.size();
 						eyevec = mine.vehicle[mine.mode].mat.zvec();
 						mine.vehicle[mine.mode].add = VGet(0.f, 0.f, 0.f);
 						change_vehicle = 2;
+						chveh = true;
 					}
 				}
 				//マウスと視点角度をリンク
@@ -1766,7 +1769,10 @@ int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _
 				//ブルーム
 				Hostpassparts->bloom(BufScreen, (mine.mode != 1) ? 64 : (255));
 				//UI
-				UIparts->draw(aimposout, mine, ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads,useVR_e);
+				UIparts->draw(aimposout, 
+					mine,
+					//chara[1],
+					ads, fps, lock_on.first, distance, aimposout_lockon, ratio, campos, camvec, camup, eye_pos_ads,useVR_e, chveh);
 				//VR用オプション
 				if (useVR_e) {
 					UIparts->draw_in_vr(mine, (*vrparts->get_device())[vrparts->get_left_hand_num()]);
